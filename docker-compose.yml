@@ -1,0 +1,24 @@
+version: '3'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"  # Adjust port as needed for your backend
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"  # Vite's default port
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - backend  # Ensures backend starts first
