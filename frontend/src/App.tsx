@@ -8,7 +8,6 @@ import './App.css';
 // Define types
 interface IpData {
   status: string;
-  check: string;
   latitude: number;
   longitude: number;
 }
@@ -100,18 +99,17 @@ function App() {
           const locationData: Location[] = [];
           const results = response.data.results;
           // Process data more efficiently
-          console.log('results :>> ', results);
           Object.keys(results).forEach(ip => {
             const data = results[ip];
             if (data && data.latitude && data.longitude) {
               locationData.push({
                 ip,
                 id: data.id,
-                name: `สถานที่ ${ip.split('.').pop()}`,
+                name: data.name || 'Unknown',
                 position: [parseFloat(data.latitude), parseFloat(data.longitude)] as [number, number],
                 latitude: parseFloat(data.latitude),
                 longitude: parseFloat(data.longitude),
-                status: data.check || 'Unknown',
+                status: data.status || 'Unknown',
               });
             }
           });
@@ -190,7 +188,7 @@ function App() {
   const mapMarkers = useMemo(() => {
     return locations.map((location, index) => {
       const ipData = ipStatuses[location.ip];
-      const status = ipData?.check || 'Checking...';
+      const status = ipData?.status || 'Checking...';
       const circleColor = getCircleColor(status, isRefreshing);
 
       return (
@@ -227,7 +225,7 @@ function App() {
   const statusList = useMemo(() => {
     return locations.map((location, index) => {
       const ipData = ipStatuses[location.ip];
-      const status = ipData?.check || 'Checking...';
+      const status = ipData?.status || 'Checking...';
       const displayStatus = isRefreshing ? 'Checking...' : status;
 
       return (

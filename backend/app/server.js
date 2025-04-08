@@ -44,10 +44,10 @@ async function getIPsFromDB() {
       SELECT 
         internet_protocol_id,
         internet_protocol,
-        internet_protocol_status,
+        internet_protocol_project,
         internet_protocol_latitude,
         internet_protocol_longtitude
-      FROM internet_protocol 
+      FROM internet_protocols
       WHERE internet_protocol IS NOT NULL 
       ORDER BY internet_protocol_id
     `);
@@ -92,8 +92,8 @@ app.post('/check-ips', async (req, res) => {
         // Include only necessary data in the result
         results[ip] = {
           id: ipRow.internet_protocol_id,
-          status: ipRow.internet_protocol_status ? "Active" : "Inactive",
-          check: pingStatus,
+          name: ipRow.internet_protocol_project,
+          status: pingStatus,
           latitude: parseFloat(ipRow.internet_protocol_latitude) || 0,
           longitude: parseFloat(ipRow.internet_protocol_longtitude) || 0,
         };
