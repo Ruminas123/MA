@@ -1,48 +1,34 @@
 const express = require('express');
 const ping = require('ping');
 const cors = require('cors');
+const pg = require('pg-promise')();
 const app = express();
 const port = process.env.PORT || 5000;
 
-const ipStatusCache = new Map();
-const CACHE_TTL = 10000;
-
-// Enable CORS and JSON parsing
-app.use(cors());
-app.use(express.json());
-
-// Middleware for logging requests
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  next();
+// Database connection with optimized connection pooling
+const db = pg({
+  connectionString: 'postgres://postgres:abc@1234@localhost:5432/ma_project',
+  max: 20, // Increased from 10 to 20 for better parallel processing
+  idleTimeoutMillis: 30000, 
+  query_timeout: 5000 // Reduced timeout for faster query completion
 });
 
-// Ping helper function to avoid code duplication
+// Enable CORS and JSON parsing with compression
+const compression = require('compression');
+app.use(compression()); // Add compression for faster data transfer
+app.use(cors());
+app.use(express.json({ limit: '1mb' }));
+
+// Ping helper function with optimized timeout settings
 async function pingHost(ip) {
   try {
-    // Check cache first
-    const cachedResult = ipStatusCache.get(ip);
-    if (cachedResult && (Date.now() - cachedResult.timestamp < CACHE_TTL)) {
-      console.log(`Cache hit for ${ip}: ${cachedResult.status}`);
-      return cachedResult.status;
-    }
-
-    // No cache or expired, perform actual ping
-    console.log(`Pinging ${ip}...`);
+    // Use optimized ping settings
     const response = await ping.promise.probe(ip, {
-      timeout: 5,
-      extra: process.platform === 'win32' ? ['-n', '2'] : ['-c', '2'],
+      timeout: 2, // Reduced from 5 to 2 seconds for faster response
+      extra: process.platform === 'win32' ? ['-n', '1'] : ['-c', '1'], // Single ping for speed
     });
-    
+
     const status = response.alive ? 'Online' : 'Offline';
-    
-    // Update cache
-    ipStatusCache.set(ip, { 
-      status, 
-      timestamp: Date.now(),
-      responseTime: response.time
-    });
-    
     return status;
   } catch (error) {
     console.error(`Error pinging ${ip}:`, error);
@@ -50,44 +36,76 @@ async function pingHost(ip) {
   }
 }
 
-// Route to check a single IP
+// Fetch IPs from DB with optimized query
+async function getIPsFromDB() {
+  try {
+    // Use a more optimized query with specific column selection
+    const rows = await db.any(`
+      SELECT 
+        internet_protocol_id,
+        internet_protocol,
+        internet_protocol_status,
+        internet_protocol_latitude,
+        internet_protocol_longtitude
+      FROM internet_protocol 
+      WHERE internet_protocol IS NOT NULL 
+      ORDER BY internet_protocol_id
+    `);
+    
+    return rows;
+  } catch (error) {
+    console.error('Database error:', error);
+    return [];
+  }
+}
+
+// Single IP route
 app.get('/check-ip/:ip', async (req, res) => {
   const ip = req.params.ip;
   try {
     const status = await pingHost(ip);
     res.json({ ip, status });
   } catch (error) {
-    console.error('Error in /check-ip:', error);
+    console.error('Error checking single IP:', error);
     res.status(500).json({ error: 'Server error checking IP' });
   }
 });
 
-// Batch endpoint to check multiple IPs concurrently
+// Optimized batch route with parallel processing
 app.post('/check-ips', async (req, res) => {
-  const { ips } = req.body;
-  
-  if (!ips || !Array.isArray(ips)) {
-    return res.status(400).json({ 
-      error: 'Invalid request', 
-      message: 'Expected array of IPs in request body' 
-    });
-  }
-  
-  console.log(`Batch checking ${ips.length} IPs`);
-  
   try {
-    // Process IPs in parallel using Promise.all for better performance
+    const ips = await getIPsFromDB();
+    if (!ips || ips.length === 0) {
+      return res.status(404).json({ error: 'No IPs found in database' });
+    }
+
     const results = {};
-    const pingPromises = ips.map(async (ip) => {
-      results[ip] = await pingHost(ip);
-    });
     
-    await Promise.all(pingPromises);
-    
-    // Return response with timestamp for client reference
-    res.json({ 
+    // Process all IPs in parallel with Promise.all for maximum speed
+    await Promise.all(ips.map(async (ipRow) => {
+      try {
+        const ip = ipRow.internet_protocol;
+        if (!ip) return;
+        
+        const pingStatus = await pingHost(ip);
+
+        // Include only necessary data in the result
+        results[ip] = {
+          id: ipRow.internet_protocol_id,
+          status: ipRow.internet_protocol_status ? "Active" : "Inactive",
+          check: pingStatus,
+          latitude: parseFloat(ipRow.internet_protocol_latitude) || 0,
+          longitude: parseFloat(ipRow.internet_protocol_longtitude) || 0,
+        };
+      } catch (ipError) {
+        console.error('Error processing an IP:', ipError);
+      }
+    }));
+
+    // Return optimized response without unnecessary metadata
+    res.json({
       results,
-      timestamp: new Date().toISOString(),
+      timestamp: Date.now(),
       count: Object.keys(results).length
     });
   } catch (error) {
@@ -96,20 +114,11 @@ app.post('/check-ips', async (req, res) => {
   }
 });
 
-// Cache management endpoint - allow clearing the cache
-app.post('/clear-cache', (req, res) => {
-  const size = ipStatusCache.size;
-  ipStatusCache.clear();
-  res.json({ message: `Cache cleared. Removed ${size} entries.` });
-});
-
-// Health check endpoint
+// Enhanced health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ 
+  res.status(200).json({
     status: 'OK',
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
-    cacheSize: ipStatusCache.size
+    uptime: process.uptime()
   });
 });
 
@@ -118,7 +127,7 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
-// Error handling middleware
+// Error handler
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error' });
@@ -127,5 +136,4 @@ app.use((err, req, res, next) => {
 // Start the server
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
-  console.log(`Health check: http://localhost:${port}/health`);
 });
