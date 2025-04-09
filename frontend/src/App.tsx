@@ -74,7 +74,7 @@ function App() {
 
   // Use axios instance with optimized settings
   const api = useMemo(() => axios.create({
-    baseURL: 'http://localhost:5000',
+    baseURL: 'http://localhost:3000',
     timeout: 30000, // Increased timeout from 10s to 30s
     headers: {
       'Content-Type': 'application/json',

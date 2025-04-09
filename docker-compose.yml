@@ -4,12 +4,16 @@ services:
   backend:
     build: ./backend
     ports:
-      - "5000:5000"  # Adjust port as needed for your backend
+      - "3000:3000"  # Adjust port as needed for your backend
     volumes:
       - ./backend:/app
       - /app/node_modules
     environment:
-      - NODE_ENV=development
+      - DB_HOST=host.docker.internal
+      - DB_PORT=5432
+      - DB_NAME=ma_project
+      - DB_USER=postgres
+      - DB_PASSWORD=abc@1234
       
   frontend:
     build: ./frontend

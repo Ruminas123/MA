@@ -1,46 +1,64 @@
 const express = require('express');
 const ping = require('ping');
 const cors = require('cors');
-const pg = require('pg-promise')();
-const app = express();
-const port = process.env.PORT || 5000;
+const compression = require('compression');
+const { Pool } = require('pg');
+require('dotenv').config();
 
-// Database connection with optimized connection pooling
-const db = pg({
-  connectionString: 'postgres://postgres:abc@1234@localhost:5432/ma_project',
-  max: 20, // Increased from 10 to 20 for better parallel processing
-  idleTimeoutMillis: 30000, 
-  query_timeout: 5000 // Reduced timeout for faster query completion
+const app = express();
+const port = process.env.PORT || 3000;
+
+const pool = new Pool({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD
 });
 
-// Enable CORS and JSON parsing with compression
-const compression = require('compression');
-app.use(compression()); // Add compression for faster data transfer
+pool.connect((err, client, release) => {
+  if (err) {
+    return console.error(err);
+  }
+  console.log('Database connected');
+  release();
+});
+
+app.use(compression());
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
-// Ping helper function with optimized timeout settings
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/index.html');
+});
+
+app.get('/api/protocols', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM internet_protocols');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error fetching data' });
+  }
+});
+
 async function pingHost(ip) {
   try {
-    // Use optimized ping settings
     const response = await ping.promise.probe(ip, {
-      timeout: 2, // Reduced from 5 to 2 seconds for faster response
-      extra: process.platform === 'win32' ? ['-n', '1'] : ['-c', '1'], // Single ping for speed
+      timeout: 2,
+      extra: process.platform === 'win32' ? ['-n', '1'] : ['-c', '1'],
     });
 
-    const status = response.alive ? 'Online' : 'Offline';
-    return status;
+    return response.alive ? 'Online' : 'Offline';
   } catch (error) {
-    console.error(`Error pinging ${ip}:`, error);
+    console.error(error);
     return 'Error';
   }
 }
 
-// Fetch IPs from DB with optimized query
 async function getIPsFromDB() {
   try {
-    // Use a more optimized query with specific column selection
-    const rows = await db.any(`
+    const result = await pool.query(`
       SELECT 
         internet_protocol_id,
         internet_protocol,
@@ -51,45 +69,40 @@ async function getIPsFromDB() {
       WHERE internet_protocol IS NOT NULL 
       ORDER BY internet_protocol_id
     `);
-    
-    return rows;
+    return result.rows;
   } catch (error) {
-    console.error('Database error:', error);
+    console.error(error);
     return [];
   }
 }
 
-// Single IP route
 app.get('/check-ip/:ip', async (req, res) => {
   const ip = req.params.ip;
   try {
     const status = await pingHost(ip);
     res.json({ ip, status });
   } catch (error) {
-    console.error('Error checking single IP:', error);
-    res.status(500).json({ error: 'Server error checking IP' });
+    console.error(error);
+    res.status(500).json({ error: 'Error checking IP' });
   }
 });
 
-// Optimized batch route with parallel processing
 app.post('/check-ips', async (req, res) => {
   try {
     const ips = await getIPsFromDB();
     if (!ips || ips.length === 0) {
-      return res.status(404).json({ error: 'No IPs found in database' });
+      return res.status(404).json({ error: 'No IPs found' });
     }
 
     const results = {};
-    
-    // Process all IPs in parallel with Promise.all for maximum speed
+
     await Promise.all(ips.map(async (ipRow) => {
       try {
         const ip = ipRow.internet_protocol;
         if (!ip) return;
-        
+
         const pingStatus = await pingHost(ip);
 
-        // Include only necessary data in the result
         results[ip] = {
           id: ipRow.internet_protocol_id,
           name: ipRow.internet_protocol_project,
@@ -98,23 +111,21 @@ app.post('/check-ips', async (req, res) => {
           longitude: parseFloat(ipRow.internet_protocol_longtitude) || 0,
         };
       } catch (ipError) {
-        console.error('Error processing an IP:', ipError);
+        console.error(ipError);
       }
     }));
 
-    // Return optimized response without unnecessary metadata
     res.json({
       results,
       timestamp: Date.now(),
       count: Object.keys(results).length
     });
   } catch (error) {
-    console.error('Error in batch IP check:', error);
-    res.status(500).json({ error: 'Server error during batch check' });
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Enhanced health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
@@ -122,18 +133,15 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Handle 404s
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
-// Error handler
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
+  console.error(err);
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start the server
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });

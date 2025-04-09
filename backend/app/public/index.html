@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ข้อมูล Internet Protocols</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        h1 {
+            color: #333;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>ข้อมูล Internet Protocols</h1>
+    <div id="loading" class="loading">กำลังโหลดข้อมูล...</div>
+    <div id="data-container">
+        <table id="protocols-table">
+            <thead>
+                <tr id="table-header">
+                    <!-- ส่วนหัวตารางจะถูกสร้างโดย JavaScript -->
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- ข้อมูลจะถูกเพิ่มโดย JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tableHeader = document.getElementById('table-header');
+            const tableBody = document.getElementById('table-body');
+            const loading = document.getElementById('loading');
+
+            // ดึงข้อมูลจาก API
+            fetch('/api/protocols')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('เกิดข้อผิดพลาดในการดึงข้อมูล');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    loading.style.display = 'none';
+                    
+                    if (data.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="100%">ไม่พบข้อมูล</td></tr>';
+                        return;
+                    }
+
+                    // สร้างส่วนหัวตาราง
+                    const headers = Object.keys(data[0]);
+                    tableHeader.innerHTML = headers.map(header => `<th>${header}</th>`).join('');
+
+                    // สร้างแถวข้อมูล
+                    tableBody.innerHTML = data.map(row => {
+                        return `<tr>${headers.map(header => `<td>${row[header] || ''}</td>`).join('')}</tr>`;
+                    }).join('');
+                })
+                .catch(error => {
+                    loading.textContent = `เกิดข้อผิดพลาด: ${error.message}`;
+                    console.error('เกิดข้อผิดพลาด:', error);
+                });
+        });
+    </script>
+</body>
+</html>
