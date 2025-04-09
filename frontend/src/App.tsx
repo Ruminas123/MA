@@ -63,6 +63,9 @@ const StatusIndicator = React.memo(({ status }: { status: string }) => {
   return <span style={style}>{status}</span>;
 });
 
+console.log(import.meta.env.VITE_API_URL);
+
+
 function App() {
   const [ipStatuses, setIpStatuses] = useState<IpStatus>({});
   const [locations, setLocations] = useState<Location[]>([]);
