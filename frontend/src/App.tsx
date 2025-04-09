@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
@@ -63,9 +63,6 @@ const StatusIndicator = React.memo(({ status }: { status: string }) => {
   return <span style={style}>{status}</span>;
 });
 
-console.log(import.meta.env.VITE_API_URL);
-
-
 function App() {
   const [ipStatuses, setIpStatuses] = useState<IpStatus>({});
   const [locations, setLocations] = useState<Location[]>([]);
@@ -77,8 +74,7 @@ function App() {
 
   // Use axios instance with optimized settings
   const api = useMemo(() => axios.create({
-    baseURL: 'http://localhost:3000',
-    timeout: 30000, // Increased timeout from 10s to 30s
+    baseURL: import.meta.env.VITE_API_URL,
     headers: {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-cache'
@@ -181,48 +177,31 @@ function App() {
     return status === 'Online' ? greenIcon : status === 'Offline' ? redIcon : silverIcon;
   }, []);
 
-  // Memoized circle color selector
-  const getCircleColor = useCallback((status: string, isRefreshing: boolean) => {
-    if (isRefreshing) return '#9E9E9E';
-    return status === 'Online' ? '#4CAF50' : status === 'Offline' ? '#F44336' : '#9E9E9E';
-  }, []);
-
   // Memoize locations for the map to prevent unnecessary re-renders
   const mapMarkers = useMemo(() => {
     return locations.map((location, index) => {
       const ipData = ipStatuses[location.ip];
       const status = ipData?.status || 'Checking...';
-      const circleColor = getCircleColor(status, isRefreshing);
 
       return (
-        <React.Fragment key={`location-${location.ip}-${index}`}>
-          <Marker position={location.position} icon={getMarkerIcon(status, isRefreshing)}>
-            <Popup>
-              <div className="popup-content">
-                <h3>{location.name}</h3>
-                <p>IP: {location.ip}</p>
-                <p style={getStatusStyle(isRefreshing ? 'Checking...' : status)}>
-                  สถานะ: {isRefreshing ? 'Checking...' : status}
-                </p>
-                {/* {ipData?.status && (
-                  <p>ในระบบ: {ipData.status === "Active" ? "เปิดใช้งาน" : "ไม่เปิดใช้งาน"}</p>
-                )} */}
-              </div>
-            </Popup>
-          </Marker>
-          <Circle
-            center={location.position}
-            radius={300}
-            pathOptions={{
-              color: circleColor,
-              fillColor: circleColor,
-              fillOpacity: 0.2,
-            }}
-          />
-        </React.Fragment>
+        <Marker 
+          key={`location-${location.ip}-${index}`}
+          position={location.position} 
+          icon={getMarkerIcon(status, isRefreshing)}
+        >
+          <Popup>
+            <div className="popup-content">
+              <h3>{location.name}</h3>
+              <p>IP: {location.ip}</p>
+              <p style={getStatusStyle(isRefreshing ? 'Checking...' : status)}>
+                สถานะ: {isRefreshing ? 'Checking...' : status}
+              </p>
+            </div>
+          </Popup>
+        </Marker>
       );
     });
-  }, [locations, ipStatuses, isRefreshing, getMarkerIcon, getCircleColor]);
+  }, [locations, ipStatuses, isRefreshing, getMarkerIcon]);
 
   // Memoize status list to prevent unnecessary re-renders
   const statusList = useMemo(() => {
@@ -238,9 +217,6 @@ function App() {
             <h3>{location.ip}</h3>
             <p>{location.name}</p>
             <StatusIndicator status={displayStatus} />
-            {/* {ipData?.status && (
-              <p>ในระบบ: {ipData.status === "Active" ? "เปิดใช้งาน" : "ไม่เปิดใช้งาน"}</p>
-            )} */}
           </div>
         </div>
       );
