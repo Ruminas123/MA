@@ -1,11 +1,9 @@
-// Import necessary React hooks and Leaflet components
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
 
-// Define types for API response and location data
 export function Home() {
   interface IpData {
     status: string;
@@ -27,7 +25,6 @@ export function Home() {
     status: string;
   }
 
-  // Component to recenter the map when `center` changes
   function MapRecenter({ center }: { center: [number, number] }) {
     const map = useMap();
     useEffect(() => {
@@ -36,7 +33,6 @@ export function Home() {
     return null;
   }
 
-  // Marker icons with color-coded status
   const greenIcon = new L.Icon({
     iconUrl: 'public/assets/green-pin.png',
     iconSize: [14, 21],
@@ -58,13 +54,11 @@ export function Home() {
     popupAnchor: [0, -32],
   });
 
-  // Optimized status text renderer with memoization
   const StatusIndicator = React.memo(({ status }: { status: string }) => {
     const style = useMemo(() => getStatusStyle(status), [status]);
     return <span style={style}>{status}</span>;
   });
 
-  // Status style utility for consistent styling
   function getStatusStyle(status: string) {
     if (status === 'Online') {
       return { color: '#4CAF50', fontWeight: 'bold' };
@@ -75,14 +69,14 @@ export function Home() {
     }
   }
 
-  // Main app component
   const [ipStatuses, setIpStatuses] = useState<IpStatus>({});
   const [locations, setLocations] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([13.7367, 100.5231]); // Default: Bangkok
+  const [mapCenter, setMapCenter] = useState<[number, number]>([13.7367, 100.5231]);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
 
   const api = useMemo(() => axios.create({
     baseURL: import.meta.env.VITE_API_URL,
@@ -92,60 +86,70 @@ export function Home() {
     }
   }), []);
 
+  useEffect(() => {
+    let timer: number | null = null;
+
+    if (isLoading || isRefreshing) {
+      setElapsedTime(0);
+      timer = window.setInterval(() => {
+        setElapsedTime(prevTime => prevTime + 1);
+      }, 1000);
+    }
+  
+    return () => {
+      if (timer !== null) {
+        clearInterval(timer);
+      }
+    };
+  }, [isLoading, isRefreshing]); 
+
   const fetchLocations = useCallback(async (abortSignal?: AbortSignal) => {
     try {
       setIsLoading(true);
       setError(null);
-
-      try {
-        const response = await api.post('/check-ips', {}, { signal: abortSignal });
-
-        if (response.data && response.data.results) {
-          const locationData: Location[] = [];
-          const results = response.data.results;
-
-          Object.keys(results).forEach(ip => {
-            const data = results[ip];
-            if (data && data.latitude && data.longitude) {
-              locationData.push({
-                ip,
-                id: data.id,
-                name: data.name || 'Unknown',
-                position: [parseFloat(data.latitude), parseFloat(data.longitude)],
-                latitude: parseFloat(data.latitude),
-                longitude: parseFloat(data.longitude),
-                status: data.status || 'Unknown',
-              });
-            }
-          });
-
-          setLocations(locationData.sort((a, b) => a.id - b.id));
-          setIpStatuses(results);
-          setLastUpdate(new Date());
-
-          if (locationData.length > 0) {
-            setMapCenter(locationData[0].position);
+  
+      const response = await api.post('/check-ips', {}, { signal: abortSignal });
+      if (response.data && response.data.results) {
+        const locationData: Location[] = [];
+        const results = response.data.results;
+  
+        Object.keys(results).forEach(ip => {
+          const data = results[ip];
+          if (data && data.latitude && data.longitude) {
+            locationData.push({
+              ip,
+              id: data.id,
+              name: data.name || 'Unknown',
+              position: [parseFloat(data.latitude), parseFloat(data.longitude)],
+              latitude: parseFloat(data.latitude),
+              longitude: parseFloat(data.longitude),
+              status: data.status || 'Unknown',
+            });
           }
-        }
-      } catch (requestError: any) {
-        if (axios.isCancel(requestError)) {
-          console.log('Request was canceled:', requestError.message);
-          return;
-        } else {
-          throw requestError;
+        });
+  
+        setLocations(locationData.sort((a, b) => a.id - b.id));
+        setIpStatuses(results);
+        setLastUpdate(new Date());
+  
+        if (locationData.length > 0) {
+          setMapCenter(locationData[0].position);
         }
       }
-    } catch (error: any) {
-      if (error.name !== 'AbortError' && error.name !== 'CanceledError') {
-        const message = error.message || 'Unknown error';
-        setError(`Error fetching locations: ${message}`);
-        console.error('Error fetching locations:', error);
+    } catch (requestError: any) {
+      // แก้ไขการแสดงผลข้อความให้ตรวจสอบเฉพาะกรณีที่คำขอถูกยกเลิก
+      if (axios.isCancel(requestError)) {
+        // ไม่แสดงข้อความ "Request was canceled" ที่คอนโซล
+        return;
+      } else {
+        throw requestError;
       }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
   }, [api]);
+  
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -215,13 +219,20 @@ export function Home() {
     });
   }, [locations, ipStatuses, isRefreshing]);
 
+  const loadingMessage = useMemo(() => {
+    if (isLoading || isRefreshing) {
+      return `กำลังโหลด... (${elapsedTime} วินาที)`;
+    }
+    return 'รีเฟรช';
+  }, [isLoading, isRefreshing, elapsedTime]);
+
   return (
     <div className="app-container">
       <header className="app-header">
         <h1>เครื่องมือตรวจสอบสถานะ IP</h1>
         <div className="controls">
           <button onClick={handleRefresh} disabled={isLoading || isRefreshing}>
-            {isLoading ? 'กำลังโหลด...' : isRefreshing ? 'กำลังรีเฟรช...' : 'รีเฟรช'}
+            {loadingMessage}
           </button>
           {lastUpdate && (
             <span className="last-update">
