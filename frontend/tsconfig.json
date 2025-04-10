@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
-    "module": "esnext",  // Use 'esnext' or 'commonjs' depending on your setup
+    "module": "esnext",  
     "jsx": "react-jsx",
     "target": "ES6",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",  // Set moduleResolution to "bundler"
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,  // Add this to enable allowImportingTsExtensions
   },
   "include": [
     "src/**/*.ts",

@@ -1,0 +1,261 @@
+// Import necessary React hooks and Leaflet components
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import axios from 'axios';
+
+// Define types for API response and location data
+export function Home() {
+  interface IpData {
+    status: string;
+    latitude: number;
+    longitude: number;
+  }
+
+  interface IpStatus {
+    [key: string]: IpData;
+  }
+
+  interface Location {
+    position: [number, number];
+    name: string;
+    ip: string;
+    id: number;
+    latitude: number;
+    longitude: number;
+    status: string;
+  }
+
+  // Component to recenter the map when `center` changes
+  function MapRecenter({ center }: { center: [number, number] }) {
+    const map = useMap();
+    useEffect(() => {
+      map.setView(center, map.getZoom());
+    }, [center, map]);
+    return null;
+  }
+
+  // Marker icons with color-coded status
+  const greenIcon = new L.Icon({
+    iconUrl: 'public/assets/green-pin.png',
+    iconSize: [14, 21],
+    iconAnchor: [12.5, 32],
+    popupAnchor: [0, -32],
+  });
+
+  const redIcon = new L.Icon({
+    iconUrl: 'public/assets/red-pin.png',
+    iconSize: [14, 21],
+    iconAnchor: [12.5, 32],
+    popupAnchor: [0, -32],
+  });
+
+  const silverIcon = new L.Icon({
+    iconUrl: 'public/assets/silver-pin.png',
+    iconSize: [14, 21],
+    iconAnchor: [12.5, 32],
+    popupAnchor: [0, -32],
+  });
+
+  // Optimized status text renderer with memoization
+  const StatusIndicator = React.memo(({ status }: { status: string }) => {
+    const style = useMemo(() => getStatusStyle(status), [status]);
+    return <span style={style}>{status}</span>;
+  });
+
+  // Status style utility for consistent styling
+  function getStatusStyle(status: string) {
+    if (status === 'Online') {
+      return { color: '#4CAF50', fontWeight: 'bold' };
+    } else if (status === 'Offline') {
+      return { color: '#F44336', fontWeight: 'bold' };
+    } else {
+      return { color: '#9E9E9E', fontWeight: 'bold' };
+    }
+  }
+
+  // Main app component
+  const [ipStatuses, setIpStatuses] = useState<IpStatus>({});
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([13.7367, 100.5231]); // Default: Bangkok
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+  const api = useMemo(() => axios.create({
+    baseURL: import.meta.env.VITE_API_URL,
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache'
+    }
+  }), []);
+
+  const fetchLocations = useCallback(async (abortSignal?: AbortSignal) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await api.post('/check-ips', {}, { signal: abortSignal });
+
+        if (response.data && response.data.results) {
+          const locationData: Location[] = [];
+          const results = response.data.results;
+
+          Object.keys(results).forEach(ip => {
+            const data = results[ip];
+            if (data && data.latitude && data.longitude) {
+              locationData.push({
+                ip,
+                id: data.id,
+                name: data.name || 'Unknown',
+                position: [parseFloat(data.latitude), parseFloat(data.longitude)],
+                latitude: parseFloat(data.latitude),
+                longitude: parseFloat(data.longitude),
+                status: data.status || 'Unknown',
+              });
+            }
+          });
+
+          setLocations(locationData.sort((a, b) => a.id - b.id));
+          setIpStatuses(results);
+          setLastUpdate(new Date());
+
+          if (locationData.length > 0) {
+            setMapCenter(locationData[0].position);
+          }
+        }
+      } catch (requestError: any) {
+        if (axios.isCancel(requestError)) {
+          console.log('Request was canceled:', requestError.message);
+          return;
+        } else {
+          throw requestError;
+        }
+      }
+    } catch (error: any) {
+      if (error.name !== 'AbortError' && error.name !== 'CanceledError') {
+        const message = error.message || 'Unknown error';
+        setError(`Error fetching locations: ${message}`);
+        console.error('Error fetching locations:', error);
+      }
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [api]);
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    setLocations(prevLocations =>
+      prevLocations.map(location => ({
+        ...location,
+        status: 'Checking...'
+      }))
+    );
+    fetchLocations();
+  }, [fetchLocations]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchLocations(controller.signal);
+    return () => {
+      controller.abort('Component unmounted');
+    };
+  }, [fetchLocations]);
+
+  const getMarkerIcon = useCallback((status: string, isRefreshing: boolean) => {
+    if (isRefreshing) return silverIcon;
+    return status === 'Online' ? greenIcon : status === 'Offline' ? redIcon : silverIcon;
+  }, []);
+
+  const mapMarkers = useMemo(() => {
+    return locations.map((location, index) => {
+      const ipData = ipStatuses[location.ip];
+      const status = ipData?.status || 'Checking...';
+
+      return (
+        <Marker
+          key={`location-${location.ip}-${index}`}
+          position={location.position}
+          icon={getMarkerIcon(status, isRefreshing)}
+        >
+          <Popup>
+            <div className="popup-content">
+              <h3>{location.name}</h3>
+              <p>IP: {location.ip}</p>
+              <p style={getStatusStyle(isRefreshing ? 'Checking...' : status)}>
+                สถานะ: {isRefreshing ? 'Checking...' : status}
+              </p>
+            </div>
+          </Popup>
+        </Marker>
+      );
+    });
+  }, [locations, ipStatuses, isRefreshing, getMarkerIcon]);
+
+  const statusList = useMemo(() => {
+    return locations.map((location, index) => {
+      const ipData = ipStatuses[location.ip];
+      const status = ipData?.status || 'Checking...';
+      const displayStatus = isRefreshing ? 'Checking...' : status;
+
+      return (
+        <div key={`status-${location.ip}-${index}`} className={`status-item ${displayStatus.toLowerCase()}`}>
+          <div className="status-indicator" />
+          <div className="status-details">
+            <h3>{location.ip}</h3>
+            <p>{location.name}</p>
+            <StatusIndicator status={displayStatus} />
+          </div>
+        </div>
+      );
+    });
+  }, [locations, ipStatuses, isRefreshing]);
+
+  return (
+    <div className="app-container">
+      <header className="app-header">
+        <h1>เครื่องมือตรวจสอบสถานะ IP</h1>
+        <div className="controls">
+          <button onClick={handleRefresh} disabled={isLoading || isRefreshing}>
+            {isLoading ? 'กำลังโหลด...' : isRefreshing ? 'กำลังรีเฟรช...' : 'รีเฟรช'}
+          </button>
+          {lastUpdate && (
+            <span className="last-update">
+              อัปเดตล่าสุด: {lastUpdate.toLocaleTimeString()}
+            </span>
+          )}
+        </div>
+      </header>
+
+      {error && <div className="error-message">{error}</div>}
+
+      <div className="content-container">
+        <div className="map-container">
+          <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; OpenStreetMap contributors'
+              maxZoom={18}
+              minZoom={5}
+            />
+            <MapRecenter center={mapCenter} />
+            {mapMarkers}
+          </MapContainer>
+        </div>
+
+        <div className="status-list">
+          <h2>IP Addresses Status:</h2>
+          <div className="status-grid">
+            {statusList}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Home;
