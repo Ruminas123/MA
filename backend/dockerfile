@@ -6,4 +6,4 @@ RUN npm install
 RUN apt-get update && apt-get install -y iputils-ping
 COPY app/ ./
 EXPOSE 5000
-CMD ["node", "server.js"]
+CMD ["node", "server-docker.js"]

@@ -34,7 +34,7 @@ if (ENABLE_CLUSTERING && cluster.isMaster) {
 
 function startServer() {
   const app = express();
-  const port = 2000;
+  const port = process.env.PORT || 3000;
   
   const pool = new Pool({
     host: process.env.DB_HOST,
@@ -87,7 +87,7 @@ function startServer() {
       const result = await pool.query(`
         SELECT * FROM internet_protocols
         ORDER BY internet_protocol_id
-        LIMIT 5
+        LIMIT 10
       `);
       
       res.json(result.rows);
@@ -123,7 +123,6 @@ function startServer() {
         FROM internet_protocols
         WHERE internet_protocol_ip IS NOT NULL AND internet_protocol_ip != ''
         ORDER BY internet_protocol_id
-        LIMIT 5
       `);
       
       return result.rows;
@@ -139,12 +138,76 @@ function startServer() {
     }
     
     const client = await pool.connect();
+    
+    try {
+      // First, let's check the column type to make sure we're using the right type for the update
+      const columnCheckResult = await client.query(`
+        SELECT data_type
+        FROM information_schema.columns
+        WHERE table_name = 'internet_protocols' AND column_name = 'internet_protocol_status'
+      `);
+      
+      const columnType = columnCheckResult.rows[0]?.data_type || 'text';
+      console.log(`Column internet_protocol_status has type: ${columnType}`);
+      
+      // Create a values array for a single bulk update query
+      const values = [];
+      const params = [];
+      let paramIndex = 1;
+      
+      for (const ip in ipResults) {
+        const data = ipResults[ip];
+        if (data && data.id && data.status) {
+          values.push(`($${paramIndex}::integer, $${paramIndex + 1}::text)`);
+          params.push(data.id, data.status);
+          paramIndex += 2;
+        }
+      }
+      
+      if (values.length === 0) {
+        return { success: false, message: 'No valid results to update', updatedCount: 0 };
+      }
+      
+      // Execute a single update with all the values, ensuring proper type casting
+      const query = `
+        WITH update_values (id, status) AS (
+          VALUES ${values.join(', ')}
+        )
+        UPDATE internet_protocols
+        SET internet_protocol_status = update_values.status
+        FROM update_values
+        WHERE internet_protocol_id = update_values.id::integer
+      `;
+      
+      const result = await client.query(query, params);
+      console.log(`Successfully updated ${result.rowCount} IP statuses in database`);
+      return { success: true, updatedCount: result.rowCount };
+    } catch (error) {
+      console.error('Error updating IP statuses in database:', error);
+      return { success: false, error: error.message, updatedCount: 0 };
+    } finally {
+      client.release();
+    }
+  }
+  
+  // Simpler row-by-row approach if bulk update still causes issues
+  async function updateIPStatusInDBRowByRow(ipResults) {
+    if (!ipResults || Object.keys(ipResults).length === 0) {
+      return { success: false, message: 'No results to update', updatedCount: 0 };
+    }
+    
+    const client = await pool.connect();
     let updatedCount = 0;
     
     try {
       await client.query('BEGIN');
       
-      for (const ip in ipResults) {
+      // Sort by ID to prevent deadlocks
+      const sortedIps = Object.keys(ipResults).sort((a, b) => 
+        ipResults[a].id - ipResults[b].id
+      );
+      
+      for (const ip of sortedIps) {
         const data = ipResults[ip];
         if (data && data.id && data.status) {
           const result = await client.query(
@@ -280,7 +343,17 @@ function startServer() {
       
       // Update database with IP status results
       const dbUpdateStart = Date.now();
-      const dbUpdateResults = await updateIPStatusInDB(results);
+      
+      // First try the bulk update method with proper type casting
+      let dbUpdateResults;
+      try {
+        dbUpdateResults = await updateIPStatusInDB(results);
+      } catch (updateError) {
+        console.log('Bulk update failed, falling back to row-by-row update:', updateError.message);
+        // If bulk update fails, fall back to row-by-row method
+        dbUpdateResults = await updateIPStatusInDBRowByRow(results);
+      }
+      
       console.log(`Database update completed in ${Date.now() - dbUpdateStart}ms`);
       
       const totalTime = Date.now() - startTime;
