@@ -1,3 +1,4 @@
+// Import necessary React hooks and Leaflet components
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -5,7 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
 import './App.css';
 
-// Define types
+// Define types for API response and location data
 interface IpData {
   status: string;
   latitude: number;
@@ -26,7 +27,7 @@ interface Location {
   status: string;
 }
 
-// Create a specialized component for map recenter
+// Component to recenter the map when `center` changes
 function MapRecenter({ center }: { center: [number, number] }) {
   const map = useMap();
   useEffect(() => {
@@ -35,44 +36,46 @@ function MapRecenter({ center }: { center: [number, number] }) {
   return null;
 }
 
-// Preload and optimize marker icons
+// Marker icons with color-coded status
 const greenIcon = new L.Icon({
   iconUrl: '/assets/green-pin.png',
-  iconSize: [25, 32], // Slightly reduced size for faster rendering
+  iconSize: [14, 21],
   iconAnchor: [12.5, 32],
   popupAnchor: [0, -32],
 });
 
 const redIcon = new L.Icon({
   iconUrl: '/assets/red-pin.png',
-  iconSize: [25, 32],
+  iconSize: [14, 21],
   iconAnchor: [12.5, 32],
   popupAnchor: [0, -32],
 });
 
 const silverIcon = new L.Icon({
   iconUrl: '/assets/silver-pin.png',
-  iconSize: [25, 32],
+  iconSize: [14, 21],
   iconAnchor: [12.5, 32],
   popupAnchor: [0, -32],
 });
 
-// Memoized status indicator for better performance
+// Optimized status text renderer with memoization
 const StatusIndicator = React.memo(({ status }: { status: string }) => {
   const style = useMemo(() => getStatusStyle(status), [status]);
   return <span style={style}>{status}</span>;
 });
 
+// Main app component
 function App() {
+  // State management
   const [ipStatuses, setIpStatuses] = useState<IpStatus>({});
   const [locations, setLocations] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([13.7367, 100.5231]);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([13.7367, 100.5231]); // Default: Bangkok
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
-  // Use axios instance with optimized settings
+  // Create axios instance with default headers and baseURL
   const api = useMemo(() => axios.create({
     baseURL: import.meta.env.VITE_API_URL,
     headers: {
@@ -81,23 +84,22 @@ function App() {
     }
   }), []);
 
-  // Optimized fetch function with abort controller
+  // Function to fetch IP location data
   const fetchLocations = useCallback(async (abortSignal?: AbortSignal) => {
     try {
       setIsLoading(true);
       setError(null);
-      
-      // Use a try-catch specifically for the axios request
+
       try {
         const response = await api.post('/check-ips', {}, {
           signal: abortSignal
         });
-        
+
         if (response.data && response.data.results) {
-          // Optimize data processing with direct mapping
           const locationData: Location[] = [];
           const results = response.data.results;
-          // Process data more efficiently
+
+          // Transform result into usable array of Location
           Object.keys(results).forEach(ip => {
             const data = results[ip];
             if (data && data.latitude && data.longitude) {
@@ -105,34 +107,32 @@ function App() {
                 ip,
                 id: data.id,
                 name: data.name || 'Unknown',
-                position: [parseFloat(data.latitude), parseFloat(data.longitude)] as [number, number],
+                position: [parseFloat(data.latitude), parseFloat(data.longitude)],
                 latitude: parseFloat(data.latitude),
                 longitude: parseFloat(data.longitude),
                 status: data.status || 'Unknown',
               });
             }
           });
+
           setLocations(locationData.sort((a, b) => a.id - b.id));
           setIpStatuses(results);
           setLastUpdate(new Date());
-          
-          // Update map center if we have locations
+
+          // Recenter the map to the first IP's position
           if (locationData.length > 0) {
             setMapCenter(locationData[0].position);
           }
         }
       } catch (requestError: any) {
-        // Handle axios specific errors
         if (axios.isCancel(requestError)) {
           console.log('Request was canceled:', requestError.message);
-          // Don't set error state for canceled requests
           return;
         } else {
-          throw requestError; // Re-throw to be caught by the outer catch
+          throw requestError;
         }
       }
     } catch (error: any) {
-      // Only set error if component is still mounted and it's not an abort error
       if (error.name !== 'AbortError' && error.name !== 'CanceledError') {
         const message = error.message || 'Unknown error';
         setError(`Error fetching locations: ${message}`);
@@ -144,40 +144,35 @@ function App() {
     }
   }, [api]);
 
+  // Trigger refresh manually
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    
-    // Optimize status update by using functional updates
-    setLocations(prevLocations => 
+    // Update status to 'Checking...' while refreshing
+    setLocations(prevLocations =>
       prevLocations.map(location => ({
         ...location,
         status: 'Checking...'
       }))
     );
-    
     fetchLocations();
   }, [fetchLocations]);
 
-  // Fixed useEffect implementation that properly handles abort controller
+  // Initial data fetch with abort controller for cleanup
   useEffect(() => {
     const controller = new AbortController();
-    
-    // Call fetchLocations with the abort signal
     fetchLocations(controller.signal);
-    
-    // Return a cleanup function
     return () => {
       controller.abort('Component unmounted');
     };
   }, [fetchLocations]);
 
-  // Memoized marker icon selector
+  // Function to pick icon based on IP status
   const getMarkerIcon = useCallback((status: string, isRefreshing: boolean) => {
     if (isRefreshing) return silverIcon;
     return status === 'Online' ? greenIcon : status === 'Offline' ? redIcon : silverIcon;
   }, []);
 
-  // Memoize locations for the map to prevent unnecessary re-renders
+  // Render map markers based on location data
   const mapMarkers = useMemo(() => {
     return locations.map((location, index) => {
       const ipData = ipStatuses[location.ip];
@@ -203,7 +198,7 @@ function App() {
     });
   }, [locations, ipStatuses, isRefreshing, getMarkerIcon]);
 
-  // Memoize status list to prevent unnecessary re-renders
+  // Render list of IPs and statuses on the side
   const statusList = useMemo(() => {
     return locations.map((location, index) => {
       const ipData = ipStatuses[location.ip];
@@ -223,6 +218,7 @@ function App() {
     });
   }, [locations, ipStatuses, isRefreshing]);
 
+  // Main render
   return (
     <div className="app-container">
       <header className="app-header">
@@ -266,7 +262,7 @@ function App() {
   );
 }
 
-// Helper function for status styling
+// Status style utility for consistent styling
 function getStatusStyle(status: string) {
   if (status === 'Online') {
     return { color: '#4CAF50', fontWeight: 'bold' };

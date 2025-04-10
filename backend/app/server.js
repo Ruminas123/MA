@@ -7,6 +7,7 @@ const cluster = require('cluster');
 const os = require('os');
 const { Worker } = require('worker_threads');
 const path = require('path');
+const http = require('http');
 require('dotenv').config();
 
 // Determine if we should use clustering based on environment
@@ -15,6 +16,7 @@ const MAX_WORKERS = process.env.MAX_WORKERS ? parseInt(process.env.MAX_WORKERS) 
 const BATCH_SIZE = process.env.BATCH_SIZE ? parseInt(process.env.BATCH_SIZE) : 50;
 const MAX_CONCURRENT_PINGS = process.env.MAX_CONCURRENT_PINGS ? parseInt(process.env.MAX_CONCURRENT_PINGS) : 100;
 const PING_TIMEOUT = process.env.PING_TIMEOUT ? parseInt(process.env.PING_TIMEOUT) : 2;
+const host = '0.0.0.0';
 
 // Only use clustering in production
 if (ENABLE_CLUSTERING && cluster.isMaster) {
@@ -79,7 +81,7 @@ function startServer() {
   
   // Enhanced middleware stack
   app.use(compression({ level: 6 })); // Higher compression level
-  app.use(cors());
+  app.use(cors({  origin: '*' }));
   app.use(express.json({ limit: '1mb' }));
   
   // Add request logging in development
@@ -118,7 +120,7 @@ function startServer() {
       const result = await pool.query(`
         SELECT * FROM internet_protocols
         ORDER BY internet_protocol_id
-        LIMIT 1000
+        LIMIT 5
       `);
       
       ipDataCache.update(result.rows);
@@ -162,6 +164,7 @@ function startServer() {
         FROM internet_protocols
         WHERE internet_protocol_ip IS NOT NULL AND internet_protocol_ip != ''
         ORDER BY internet_protocol_id
+        LIMIT 5
       `);
       
       ipDataCache.update(result.rows);
@@ -325,7 +328,7 @@ function startServer() {
   });
   
   // Start the server
-  app.listen(port, () => {
-    console.log(`Server ${process.pid} running on http://localhost:${port}`);
+  app.listen(port, host, () => {
+    console.log(`Server ${process.pid} running on http://${host}:${port}`);
   });
 }

@@ -3,13 +3,14 @@ version: '3'
 services:
   backend:
     build: ./backend
-    container_name: ma_backend_container  # Custom name for the backend container
+    container_name: ma_backend_container
     ports:
-      - "3000:3000"  # Adjust port as needed for your backend
+      - "3000:3000"
     volumes:
       - ./backend:/app
       - /app/node_modules
     environment:
+      - NETWORK_HOST=192.168.100.180
       - DB_HOST=host.docker.internal
       - DB_PORT=5432
       - DB_NAME=ma_project
@@ -18,13 +19,13 @@ services:
   
   frontend:
     build: ./frontend
-    container_name: ma_frontend_container  # Custom name for the frontend container
+    container_name: ma_frontend_container 
     ports:
-      - "5173:5173"  # Vite's default port
+      - "5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
       - NODE_ENV=development
     depends_on:
-      - backend  # Ensures backend starts first
+      - backend
