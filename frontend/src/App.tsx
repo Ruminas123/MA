@@ -1,11 +1,11 @@
-import "./App.css";
-import { Outlet } from "react-router-dom";
+import { AuthProvider } from './contexts/AuthContext';
+import { Outlet } from 'react-router-dom';
 
 function App() {
   return (
-    <div>
+    <AuthProvider>
       <Outlet />
-    </div>
+    </AuthProvider>
   );
 }
 

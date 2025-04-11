@@ -88,7 +88,7 @@ export function Home() {
 
   useEffect(() => {
     let timer: number | null = null;
-
+    console.log('isLoading :>> ', isLoading);
     if (isLoading || isRefreshing) {
       setElapsedTime(0);
       timer = window.setInterval(() => {

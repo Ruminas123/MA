@@ -123,7 +123,7 @@ function startServer() {
         FROM internet_protocols
         WHERE internet_protocol_ip IS NOT NULL AND internet_protocol_ip != ''
         ORDER BY internet_protocol_id
-        LIMIT 5
+        LIMIT 50
       `);
       
       return result.rows;
