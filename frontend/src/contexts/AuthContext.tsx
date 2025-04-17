@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 interface AuthContextType {
@@ -14,13 +15,14 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   login: () => {},
   logout: () => {},
-  loading: true
+  loading: true,
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate(); // ใช้ navigate ในการนำทาง
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -28,7 +30,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (token) {
         try {
           axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          const response = await axios.get('/api/auth/verify');
+          const response = await axios.get('http://192.168.100.138:2000/api/auth/verify');
+          console.log('response :>> ', response);
           setUser(response.data.user);
           setIsAuthenticated(true);
         } catch (error) {
@@ -36,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           delete axios.defaults.headers.common['Authorization'];
         }
       }
-      setLoading(false);
+      setLoading(false); // ทำการตั้งค่า loading เป็น false เมื่อเสร็จสิ้นการตรวจสอบ
     };
 
     initializeAuth();
