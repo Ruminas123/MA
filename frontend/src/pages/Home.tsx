@@ -112,7 +112,8 @@ export function Home() {
       console.log('response :>> ', response.data);
       if (response.data) {
         const locationData: Location[] = [];
-        const results = response.data;
+        // const results = response.data;
+        const results = response.data.results;
 
         Object.keys(results).forEach(ip => {
           const data = results[ip];

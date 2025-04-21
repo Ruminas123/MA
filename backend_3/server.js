@@ -4,7 +4,7 @@ const compression = require('compression');
 const timeoutMiddleware = require('./middlewares/timeout.middleware');
 const authRoutes = require('./routes/auth.routes');
 const ipRoutes = require('./routes/ip.routes');
-const protocolRoutes = require('./routes/protocol.routes');
+// const protocolRoutes = require('./routes/protocol.routes');
 require('dotenv').config();
 
 const app = express();
@@ -17,7 +17,7 @@ app.use(timeoutMiddleware);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/ip', ipRoutes);
-app.use('/api/protocols', protocolRoutes);
+// app.use('/api/protocols', protocolRoutes);
 
 app.get('/', (req, res) => res.sendFile(__dirname + '/public/index.html'));
 

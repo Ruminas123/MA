@@ -44,7 +44,7 @@ export function Login() {
         // Check if the role is admin
         if (user.role === 'admin') {
           // If role is admin, navigate to Admin page
-          navigate('/ma-app/admin', { replace: true });
+          navigate('/ma-app/', { replace: true });
         } else {
           // Otherwise, navigate to the original or home page
           const from = location.state?.from?.pathname || '/';
@@ -64,7 +64,8 @@ export function Login() {
     <div className="login-container">
       <div className="login-card">
         <h2 className="login-title">เข้าสู่ระบบ</h2>
-
+        <p className="login-title" style={{color: 'red'}}>user: admin</p>
+        <p className="login-title" style={{color: 'red'}}>pass: 123456</p>
         {error && <div className="login-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>

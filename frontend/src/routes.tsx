@@ -15,8 +15,8 @@ export const router = createBrowserRouter([
         index: true,
         element: (
           <ProtectedRoute>
-            {/* <Home /> */}
-            <User />
+            <Home />
+            {/* <User /> */}
           </ProtectedRoute>
         ),
       },
@@ -32,12 +32,14 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      {
-        path: "home",
-        element: (
-            <Home />
-        ),
-      },
+      // {
+      //   path: "home",
+      //   element: (
+      //     <ProtectedRoute>
+      //       <Home />
+      //     </ProtectedRoute>
+      //   ),
+      // },
     ],
   },
 ]);
