@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import './Login.css';
 
-const API_BASE_URL = 'http://192.168.100.138:2000'; // Update this to match your server address
+const API_BASE_URL = import.meta.env.VITE_API_URL; // Update this to match your server address
 
 interface LoginForm {
   personnel_username: string;

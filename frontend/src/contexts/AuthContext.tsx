@@ -18,6 +18,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
 });
 
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<any | null>(null);
@@ -30,7 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (token) {
         try {
           axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          const response = await axios.get('http://192.168.100.138:2000/api/auth/verify');
+          const response = await axios.get(`${API_BASE_URL}/api/auth/verify`);
           console.log('response :>> ', response);
           setUser(response.data.user);
           setIsAuthenticated(true);
