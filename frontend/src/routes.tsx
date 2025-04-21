@@ -25,11 +25,17 @@ export const router = createBrowserRouter([
         element: <Login />,
       },
       {
-        path: "Admin",
+        path: "admin",
         element: (
           <ProtectedRoute>
             <Admin />
           </ProtectedRoute>
+        ),
+      },
+      {
+        path: "home",
+        element: (
+            <Home />
         ),
       },
     ],

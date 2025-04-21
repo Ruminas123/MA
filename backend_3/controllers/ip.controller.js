@@ -6,7 +6,7 @@ exports.checkIP = async (req, res) => {
     const status = await ipService.pingHost(ip);
     res.json({ ip, status });
   } catch (error) {
-    console.error(`Error checking IP ${ip}:`, error);
+    console.error(`Error checking IP ${req.params.ip}:`, error);
     res.status(500).json({ error: 'Error checking IP' });
   }
 };

@@ -1,10 +1,8 @@
-// routes/ip.routes.js
 const express = require('express');
 const router = express.Router();
+const ipController = require('../controllers/ip.controller');
 
-// ตัวอย่าง route
-router.get('/check-ips', (req, res) => {
-  res.send('IP check route working');
-});
+router.get('/check-ip/:ip', ipController.checkIP);
+router.post('/check-ips', ipController.checkIPs);
 
 module.exports = router;

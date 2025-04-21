@@ -3,6 +3,8 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
+import './Home.css';
+
 
 export function Home() {
   interface IpData {
@@ -34,21 +36,21 @@ export function Home() {
   }
 
   const greenIcon = new L.Icon({
-    iconUrl: 'public/assets/green-pin.png',
+    iconUrl: '/ma-app/assets/green-pin.png',  // Corrected icon path
     iconSize: [14, 21],
     iconAnchor: [12.5, 32],
     popupAnchor: [0, -32],
   });
 
   const redIcon = new L.Icon({
-    iconUrl: 'public/assets/red-pin.png',
+    iconUrl: '/ma-app/assets/red-pin.png',  // Corrected icon path
     iconSize: [14, 21],
     iconAnchor: [12.5, 32],
     popupAnchor: [0, -32],
   });
 
   const silverIcon = new L.Icon({
-    iconUrl: 'public/assets/silver-pin.png',
+    iconUrl: '/ma-app/assets/silver-pin.png',  // Corrected icon path
     iconSize: [14, 21],
     iconAnchor: [12.5, 32],
     popupAnchor: [0, -32],
@@ -88,31 +90,30 @@ export function Home() {
 
   useEffect(() => {
     let timer: number | null = null;
-    console.log('isLoading :>> ', isLoading);
     if (isLoading || isRefreshing) {
       setElapsedTime(0);
       timer = window.setInterval(() => {
         setElapsedTime(prevTime => prevTime + 1);
       }, 1000);
     }
-  
     return () => {
       if (timer !== null) {
         clearInterval(timer);
       }
     };
-  }, [isLoading, isRefreshing]); 
+  }, [isLoading, isRefreshing]);
 
   const fetchLocations = useCallback(async (abortSignal?: AbortSignal) => {
     try {
       setIsLoading(true);
       setError(null);
-  
-      const response = await api.post('/check-ips', {}, { signal: abortSignal });
-      if (response.data && response.data.results) {
+
+      const response = await api.post('/api/ip/check-ips', {}, { signal: abortSignal });
+      console.log('response :>> ', response.data);
+      if (response.data) {
         const locationData: Location[] = [];
-        const results = response.data.results;
-  
+        const results = response.data;
+
         Object.keys(results).forEach(ip => {
           const data = results[ip];
           if (data && data.latitude && data.longitude) {
@@ -127,29 +128,26 @@ export function Home() {
             });
           }
         });
-  
+
         setLocations(locationData.sort((a, b) => a.id - b.id));
         setIpStatuses(results);
         setLastUpdate(new Date());
-  
+
         if (locationData.length > 0) {
           setMapCenter(locationData[0].position);
         }
       }
     } catch (requestError: any) {
-      // แก้ไขการแสดงผลข้อความให้ตรวจสอบเฉพาะกรณีที่คำขอถูกยกเลิก
       if (axios.isCancel(requestError)) {
-        // ไม่แสดงข้อความ "Request was canceled" ที่คอนโซล
         return;
       } else {
-        throw requestError;
+        setError('There was an error fetching data.');
       }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
   }, [api]);
-  
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -245,7 +243,7 @@ export function Home() {
       {error && <div className="error-message">{error}</div>}
 
       <div className="content-container">
-        <div className="map-container">
+        <div className="map-container" style={{ height: '500px' }}>
           <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
