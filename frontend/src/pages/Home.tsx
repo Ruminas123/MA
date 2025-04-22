@@ -250,7 +250,7 @@ export function Home() {
       {error && <div className="error-message">{error}</div>}
 
       <div className="content-container">
-        <div className="map-container" style={{ height: '500px' }}>
+        <div className="map-container">
           <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

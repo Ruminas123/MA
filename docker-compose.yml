@@ -7,8 +7,8 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./backend:/app
-      - /app/node_modules
+      - ./backend:/usr/src/app   # ใช้เพื่อ development
+      - /usr/src/app/node_modules # สำคัญ: ป้องกันไม่ให้ node_modules จาก host ถูก mount
     environment:
       - NETWORK_HOST=192.168.100.180
       - DB_HOST=host.docker.internal
