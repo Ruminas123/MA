@@ -4,6 +4,7 @@ const { Pool } = require('pg');
 const { Worker } = require('worker_threads');
 const os = require('os');
 const ping = require('ping');
+const { authenticateToken } = require('../middlewares/auth.middleware'); // Destructure the middleware
 
 // Configuration
 const ENABLE_CLUSTERING = process.env.ENABLE_CLUSTERING === 'true';
@@ -170,7 +171,7 @@ async function processBatchInWorker(ipBatch) {
 }
 
 // Route to get the IPs from the database
-router.post('/get-ips', async (req, res) => {
+router.post('/get-ips', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT *

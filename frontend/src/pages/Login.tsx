@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api'; // เปลี่ยนจาก axios เป็น api instance
 import { useAuth } from '../contexts/AuthContext';
 import './Login.css';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL; // Update this to match your server address
 
 interface LoginForm {
   personnel_username: string;
@@ -33,20 +31,17 @@ export function Login() {
     setError('');
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/auth/login`, formData, {
+      // ใช้ api instance แทน axios โดยตรง
+      const response = await api.post('/api/auth/login', formData, {
         headers: { 'Content-Type': 'application/json' }
       });
 
       if (response.data && response.data.token) {
         const user = response.data.user;
         login(response.data.token, user);
-        console.log('user :>> ', user);
-        // Check if the role is admin
         if (user.role === 'admin') {
-          // If role is admin, navigate to Admin page
           navigate('/ma-app/', { replace: true });
         } else {
-          // Otherwise, navigate to the original or home page
           const from = location.state?.from?.pathname || '/';
           navigate(from, { replace: true });
         }
@@ -60,12 +55,12 @@ export function Login() {
     }
   };
 
+  // รายละเอียด JSX คงเดิม
   return (
     <div className="login-container">
       <div className="login-card">
         <h2 className="login-title">เข้าสู่ระบบ</h2>
-        <p className="login-title" style={{color: 'red'}}>user: admin</p>
-        <p className="login-title" style={{color: 'red'}}>pass: 123456</p>
+        <p className="login-title" style={{color: 'red'}}>user: admin , pass: 123456</p>
         {error && <div className="login-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>

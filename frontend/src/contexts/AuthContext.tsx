@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -18,47 +18,62 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
 });
 
-const API_BASE_URL = import.meta.env.VITE_API_URL;
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate(); // ใช้ navigate ในการนำทาง
+  const navigate = useNavigate();
 
   useEffect(() => {
     const initializeAuth = async () => {
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          const response = await axios.get(`${API_BASE_URL}/api/auth/verify`);
-          console.log('response :>> ', response);
+          const response = await api.get('/api/auth/verify');
           setUser(response.data.user);
           setIsAuthenticated(true);
         } catch (error) {
           localStorage.removeItem('token');
-          delete axios.defaults.headers.common['Authorization'];
         }
       }
-      setLoading(false); // ทำการตั้งค่า loading เป็น false เมื่อเสร็จสิ้นการตรวจสอบ
+      setLoading(false);
     };
 
     initializeAuth();
+
+    const interceptor = api.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          const voluntary = localStorage.getItem('voluntaryLogout');
+          if (!voluntary) {
+            logout();
+          } else {
+            localStorage.removeItem('voluntaryLogout');
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      api.interceptors.response.eject(interceptor);
+    };
   }, []);
 
   const login = (token: string, userData: any) => {
     localStorage.setItem('token', token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     setUser(userData);
     setIsAuthenticated(true);
+    localStorage.removeItem('voluntaryLogout');
   };
 
   const logout = () => {
+    localStorage.setItem('voluntaryLogout', 'true');
     localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
     setUser(null);
     setIsAuthenticated(false);
+    navigate('/ma-app/login');
   };
 
   return (

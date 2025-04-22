@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useEffect } from 'react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -10,9 +11,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
   const { isAuthenticated, user, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) return <div>Loading...</div>; // แสดงข้อความ loading ระหว่างที่กำลังตรวจสอบ token
+  if (loading) return null;
 
   if (!isAuthenticated) {
+    const isVoluntaryLogout = localStorage.getItem('voluntaryLogout') === 'true';
+    if (!isVoluntaryLogout) { alert('session หมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่');} 
+    else {localStorage.removeItem('voluntaryLogout');}
+
     return <Navigate to="/ma-app/login" state={{ from: location }} replace />;
   }
 

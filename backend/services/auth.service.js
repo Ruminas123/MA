@@ -25,5 +25,5 @@ exports.authenticateUser = async (username, password) => {
 
 exports.generateToken = (userData) => {
   // Generate a JWT token with user data (id, username, role)
-  return jwt.sign({ id: userData.id, username: userData.username, role: userData.role }, process.env.JWT_SECRET, { expiresIn: '300s' });
+  return jwt.sign({ id: userData.id, username: userData.username, role: userData.role }, process.env.JWT_SECRET, { expiresIn: '10s' });
 };

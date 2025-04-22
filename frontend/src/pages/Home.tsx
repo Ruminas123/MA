@@ -2,10 +2,14 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import axios from 'axios';
+import axios from 'axios'; // ยังจำเป็นสำหรับ axios.isCancel
 import './Home.css';
+import api from '../utils/api'; // ใช้ api จากไฟล์นี้แทน
+import { useAuth } from '../contexts/AuthContext';
 
 export function Home() {
+  const { user, logout } = useAuth();
+
   interface IpData {
     status: string;
     latitude: number;
@@ -25,6 +29,17 @@ export function Home() {
     longitude: number;
     status: string;
   }
+
+  const LoadingPage = () => {
+    return (
+      <section id='Home'>
+        <div className="loading-screen">
+          <div className="spinner" />
+          <p>กำลังโหลดแผนที่และข้อมูล IP...</p>
+        </div>
+      </section>
+    );
+  };
 
   function MapRecenter({ center }: { center: [number, number] }) {
     const map = useMap();
@@ -75,17 +90,10 @@ export function Home() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([13.7367, 100.5231]);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([13.757936, 100.441008]);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [elapsedTime, setElapsedTime] = useState<number>(0);
 
-  const api = useMemo(() => axios.create({
-    baseURL: import.meta.env.VITE_API_URL,
-    headers: {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-cache'
-    }
-  }), []);
 
   useEffect(() => {
     let timer: number | null = null;
@@ -141,10 +149,6 @@ export function Home() {
         setLocations(locationData.sort((a, b) => a.id - b.id));
         setIpStatuses(ipStatusMap);
         setLastUpdate(new Date());
-
-        if (locationData.length > 0) {
-          setMapCenter(locationData[0].position);
-        }
       }
     } catch (requestError: any) {
       if (!axios.isCancel(requestError)) {
@@ -154,18 +158,7 @@ export function Home() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [api]);
-
-  // const handleRefresh = useCallback(() => {
-  //   setIsRefreshing(true);
-  //   setLocations(prevLocations =>
-  //     prevLocations.map(location => ({
-  //       ...location,
-  //       status: 'Checking...'
-  //     }))
-  //   );
-  //   fetchLocations();
-  // }, [fetchLocations]);
+  }, []); // ลบ api จาก dependency array
 
   useEffect(() => {
     const controller = new AbortController();
@@ -224,53 +217,77 @@ export function Home() {
     });
   }, [locations, ipStatuses, isRefreshing]);
 
-  const loadingMessage = useMemo(() => {
-    if (isLoading || isRefreshing) {
-      return `กำลังโหลด... (${elapsedTime} วินาที)`;
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    setLocations(prevLocations =>
+      prevLocations.map(location => ({
+        ...location,
+        status: 'Checking...'
+      }))
+    );
+    fetchLocations();
+  }, [fetchLocations]);
+
+  const getAdjustedDate = () => {
+    const now = new Date();
+    const eighteen = new Date();
+    eighteen.setHours(18, 0, 0, 0); // ตั้งเวลาเป็น 18:00:00.000
+  
+    // ถ้าตอนนี้ยังไม่ถึง 18:00 → คืนค่าวันเมื่อวาน
+    if (now < eighteen) {
+      now.setDate(now.getDate() - 1);
     }
-    return 'รีเฟรช';
-  }, [isLoading, isRefreshing, elapsedTime]);
+  
+    return now.toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  if (isLoading) { return <LoadingPage /> }
 
   return (
-    <div className="app-container">
-      <header className="app-header">
-        <h1>เครื่องมือตรวจสอบสถานะ IP</h1>
-        <div className="controls">
-          {/* <button onClick={handleRefresh} disabled={isLoading || isRefreshing}>
-            {loadingMessage}
-          </button> */}
-          {lastUpdate && (
+    <section id='Home'>
+      <div className="app-container">
+        <header className="app-header">
+          <h1>เครื่องมือตรวจสอบสถานะ IP</h1>
+          <div className="controls">
             <span className="last-update">
-              อัปเดตล่าสุด: {lastUpdate.toLocaleTimeString()}
+              อัปเดตล่าสุด: {getAdjustedDate()} เวลา 18:00:00 น.
             </span>
-          )}
-        </div>
-      </header>
+            <button onClick={handleRefresh} disabled={isLoading || isRefreshing}>
+              {/* เนื้อหาของปุ่ม refresh */}
+            </button>
+            <button style={{ background: 'red' }} onClick={logout}>Logout</button>
+          </div>
+        </header>
 
-      {error && <div className="error-message">{error}</div>}
+        {error && <div className="error-message">{error}</div>}
 
-      <div className="content-container">
-        <div className="map-container">
-          <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; OpenStreetMap contributors'
-              maxZoom={18}
-              minZoom={5}
-            />
-            <MapRecenter center={mapCenter} />
-            {mapMarkers}
-          </MapContainer>
-        </div>
+        <div className="content-container">
+          <div className="map-container">
+            <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; OpenStreetMap contributors'
+                maxZoom={18}
+                minZoom={5}
+              />
+              <MapRecenter center={mapCenter} />
+              {mapMarkers}
+            </MapContainer>
+          </div>
 
-        <div className="status-list">
-          <h2>IP Addresses Status:</h2>
-          <div className="status-grid">
-            {statusList}
+          <div className="status-list">
+            <h2>IP Addresses Status:</h2>
+            <div className="status-grid">
+              {statusList}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 

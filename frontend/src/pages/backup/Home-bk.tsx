@@ -5,8 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
 import './Home.css';
 
-
-export function Homes() {
+export function Home() {
   interface IpData {
     status: string;
     latitude: number;
@@ -36,21 +35,21 @@ export function Homes() {
   }
 
   const greenIcon = new L.Icon({
-    iconUrl: '/ma-app/assets/green-pin.png',  // Corrected icon path
+    iconUrl: '/ma-app/assets/green-pin.png',
     iconSize: [14, 21],
     iconAnchor: [12.5, 32],
     popupAnchor: [0, -32],
   });
 
   const redIcon = new L.Icon({
-    iconUrl: '/ma-app/assets/red-pin.png',  // Corrected icon path
+    iconUrl: '/ma-app/assets/red-pin.png',
     iconSize: [14, 21],
     iconAnchor: [12.5, 32],
     popupAnchor: [0, -32],
   });
 
   const silverIcon = new L.Icon({
-    iconUrl: '/ma-app/assets/silver-pin.png',  // Corrected icon path
+    iconUrl: '/ma-app/assets/silver-pin.png',
     iconSize: [14, 21],
     iconAnchor: [12.5, 32],
     popupAnchor: [0, -32],
@@ -76,7 +75,7 @@ export function Homes() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([13.7367, 100.5231]);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([13.757936, 100.441008]);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [elapsedTime, setElapsedTime] = useState<number>(0);
 
@@ -108,30 +107,39 @@ export function Homes() {
       setIsLoading(true);
       setError(null);
 
-      const response = await api.post('/api/ip/check-ips', {}, { signal: abortSignal });
-      console.log('response :>> ', response.data);
-      if (response.data) {
-        const locationData: Location[] = [];
-        const results = response.data;
-        // const results = response.data.result;
+      const response = await api.post('/api/ip/get-ips', {}, { signal: abortSignal });
+      const results = response.data.results;
 
-        Object.keys(results).forEach(ip => {
-          const data = results[ip];
-          if (data && data.latitude && data.longitude) {
+      if (results) {
+        const locationData: Location[] = [];
+        const ipStatusMap: IpStatus = {};
+
+        results.forEach((data: any) => {
+          if (data && data.internet_protocol_latitude && data.internet_protocol_longtitude) {
+            const lat = parseFloat(data.internet_protocol_latitude);
+            const lng = parseFloat(data.internet_protocol_longtitude);
+            const ip = data.internet_protocol_ip;
+
             locationData.push({
               ip,
-              id: data.id,
-              name: data.name || 'Unknown',
-              position: [parseFloat(data.latitude), parseFloat(data.longitude)],
-              latitude: parseFloat(data.latitude),
-              longitude: parseFloat(data.longitude),
-              status: data.status || 'Unknown',
+              id: data.internet_protocol_id,
+              name: data.internet_protocol_location || 'Unknown',
+              position: [lat, lng],
+              latitude: lat,
+              longitude: lng,
+              status: data.internet_protocol_status || 'Unknown',
             });
+
+            ipStatusMap[ip] = {
+              status: data.internet_protocol_status || 'Unknown',
+              latitude: lat,
+              longitude: lng
+            };
           }
         });
 
         setLocations(locationData.sort((a, b) => a.id - b.id));
-        setIpStatuses(results);
+        setIpStatuses(ipStatusMap);
         setLastUpdate(new Date());
 
         if (locationData.length > 0) {
@@ -139,9 +147,7 @@ export function Homes() {
         }
       }
     } catch (requestError: any) {
-      if (axios.isCancel(requestError)) {
-        return;
-      } else {
+      if (!axios.isCancel(requestError)) {
         setError('There was an error fetching data.');
       }
     } finally {
@@ -244,7 +250,7 @@ export function Homes() {
       {error && <div className="error-message">{error}</div>}
 
       <div className="content-container">
-        <div className="map-container" style={{ height: '500px' }}>
+        <div className="map-container">
           <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -268,4 +274,4 @@ export function Homes() {
   );
 }
 
-export default Homes;
+export default Home;
