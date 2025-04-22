@@ -14,9 +14,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
   if (loading) return null;
 
   if (!isAuthenticated) {
-    const isVoluntaryLogout = localStorage.getItem('voluntaryLogout') === 'true';
-    if (!isVoluntaryLogout) { alert('session หมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่');} 
-    else {localStorage.removeItem('voluntaryLogout');}
 
     return <Navigate to="/ma-app/login" state={{ from: location }} replace />;
   }
