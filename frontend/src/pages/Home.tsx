@@ -119,7 +119,7 @@ export function Home() {
         const ipStatusMap: IpStatus = {};
 
         results.forEach((data: any) => {
-          if (data && data.internet_protocol_latitude && data.internet_protocol_longtitude) {
+          if (data && data.internet_protocol_latitude && data.internet_protocol_longtitude && data.internet_protocol_ip) {
             const lat = parseFloat(data.internet_protocol_latitude);
             const lng = parseFloat(data.internet_protocol_longtitude);
             const ip = data.internet_protocol_ip;
@@ -154,7 +154,7 @@ export function Home() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []); // ลบ api จาก dependency array
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -184,9 +184,9 @@ export function Home() {
             <div className="popup-content">
               <h3>{location.name}</h3>
               <p>IP: {location.ip}</p>
-              <p style={getStatusStyle(isRefreshing ? 'Checking...' : status)}>
+              {/* <p style={getStatusStyle(isRefreshing ? 'Checking...' : status)}>
                 สถานะ: {isRefreshing ? 'Checking...' : status}
-              </p>
+              </p> */}
             </div>
           </Popup>
         </Marker>
@@ -206,33 +206,30 @@ export function Home() {
           <div className="status-details">
             <h3>{location.ip}</h3>
             <p>{location.name}</p>
-            <StatusIndicator status={displayStatus} />
+            {/* <StatusIndicator status={displayStatus} /> */}
           </div>
         </div>
       );
     });
   }, [locations, ipStatuses, isRefreshing]);
 
-  const handleRefresh = useCallback(() => {
-    setIsRefreshing(true);
-    setLocations(prevLocations =>
-      prevLocations.map(location => ({
-        ...location,
-        status: 'Checking...'
-      }))
-    );
-    fetchLocations();
-  }, [fetchLocations]);
+  // const handleRefresh = useCallback(() => {
+  //   setIsRefreshing(true);
+  //   setLocations(prevLocations =>
+  //     prevLocations.map(location => ({
+  //       ...location,
+  //       status: 'Checking...'
+  //     }))
+  //   );
+  //   fetchLocations();
+  // }, [fetchLocations]);
 
   const getAdjustedDate = () => {
     const now = new Date();
     const eighteen = new Date();
-    eighteen.setHours(18, 0, 0, 0); // ตั้งเวลาเป็น 18:00:00.000
+    eighteen.setHours(18, 0, 0, 0);
   
-    // ถ้าตอนนี้ยังไม่ถึง 18:00 → คืนค่าวันเมื่อวาน
-    if (now < eighteen) {
-      now.setDate(now.getDate() - 1);
-    }
+    if (now < eighteen) { now.setDate(now.getDate() - 1) }
   
     return now.toLocaleDateString('th-TH', {
       year: 'numeric',
@@ -252,9 +249,7 @@ export function Home() {
             <span className="last-update">
               อัปเดตล่าสุด: {getAdjustedDate()} เวลา 18:00:00 น.
             </span>
-            <button onClick={handleRefresh} disabled={isLoading || isRefreshing}>
-              {/* เนื้อหาของปุ่ม refresh */}
-            </button>
+            {/* <button onClick={handleRefresh} disabled={isLoading || isRefreshing}>refresh</button> */}
             <button style={{ background: 'red' }} onClick={logout}>Logout</button>
           </div>
         </header>
