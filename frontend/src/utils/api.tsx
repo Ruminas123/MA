@@ -20,13 +20,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      const isVoluntaryLogout = localStorage.getItem('voluntaryLogout') === 'true';
-    
-      if (!isVoluntaryLogout) {
         alert('session หมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่');
         localStorage.removeItem('token');
         window.location.href = '/ma-app/login';
-      }
     }
     return Promise.reject(error);
   }

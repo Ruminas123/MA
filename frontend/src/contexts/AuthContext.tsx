@@ -45,12 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          const voluntary = localStorage.getItem('voluntaryLogout');
-          if (!voluntary) {
             logout();
-          } else {
-            localStorage.removeItem('voluntaryLogout');
-          }
         }
         return Promise.reject(error);
       }
@@ -65,11 +60,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('token', token);
     setUser(userData);
     setIsAuthenticated(true);
-    localStorage.removeItem('voluntaryLogout');
   };
 
   const logout = () => {
-    localStorage.setItem('voluntaryLogout', 'true');
     localStorage.removeItem('token');
     setUser(null);
     setIsAuthenticated(false);

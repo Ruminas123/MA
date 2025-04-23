@@ -12,15 +12,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
   const location = useLocation();
 
   if (loading) return null;
-
-  if (!isAuthenticated) {
-
-    return <Navigate to="/ma-app/login" state={{ from: location }} replace />;
-  }
-
-  if (requiredRole && !requiredRole.includes(user?.role || '')) {
-    return <Navigate to="/unauthorized" replace />;
-  }
+  else if (!isAuthenticated) { return <Navigate to="/ma-app/login" state={{ from: location }} replace />}
+  else if (requiredRole && !requiredRole.includes(user?.role || '')) { return <Navigate to="/unauthorized" replace />}
 
   return <>{children}</>;
 };

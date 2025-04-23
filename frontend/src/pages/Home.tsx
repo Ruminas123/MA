@@ -76,13 +76,9 @@ export function Home() {
   });
 
   function getStatusStyle(status: string) {
-    if (status === 'Online') {
-      return { color: '#4CAF50', fontWeight: 'bold' };
-    } else if (status === 'Offline') {
-      return { color: '#F44336', fontWeight: 'bold' };
-    } else {
-      return { color: '#9E9E9E', fontWeight: 'bold' };
-    }
+    if (status === 'Online') {return { color: '#4CAF50', fontWeight: 'bold' }} 
+    else if (status === 'Offline') {return { color: '#F44336', fontWeight: 'bold' }} 
+    else {return { color: '#9E9E9E', fontWeight: 'bold' }}
   }
 
   const [ipStatuses, setIpStatuses] = useState<IpStatus>({});
