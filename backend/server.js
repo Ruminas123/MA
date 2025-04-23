@@ -11,6 +11,7 @@ const axios = require('axios');  // เพิ่มการ import axios
 
 const app = express();
 const port = process.env.PORT || 3000;
+const host = process.env.NETWORK_HOST || 'localhost';
 
 app.use(compression());
 app.use(cors());
@@ -25,12 +26,12 @@ app.get('/', (req, res) => res.sendFile(__dirname + '/public/index.html'));
 app.listen(port, () => console.log(`Server running on port ${port}`));
 
 cron.schedule('00 18 * * *', async () => {
-    try {
-      console.log('[CRON] Running /check-ips at 18:00');
-  
-      const response = await axios.post(`http://192.168.100.180:${port}/api/ip/check-ips`);
-      console.log(`[CRON] /check-ips complete. Checked: ${response.data?.count || 0} IPs at ${new Date().toLocaleString()}`);
-    } catch (error) {
-      console.error('[CRON] Error calling /check-ips:', error.message);
-    }
-  });
+  try {
+    console.log('[CRON] Running /check-ips at 18:00');
+
+    const response = await axios.post(`http://${host}:${port}/api/ip/check-ips`);
+    console.log(`[CRON] /check-ips complete. Checked: ${response.data?.count || 0} IPs at ${new Date().toLocaleString()}`);
+  } catch (error) {
+    console.error('[CRON] Error calling /check-ips:', error.message);
+  }
+});
