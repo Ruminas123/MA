@@ -3,7 +3,7 @@ import App from './App';
 import { Home } from './pages/Home';
 import { Login } from './pages/Login';
 import { User } from './pages/User';
-import { Admin } from './pages/Admin';
+import { Admin } from './pages/Admin/Admin';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 export const router = createBrowserRouter([
@@ -14,9 +14,8 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole={['user', 'admin']}>
             <Home />
-            {/* <User /> */}
           </ProtectedRoute>
         ),
       },
@@ -27,19 +26,11 @@ export const router = createBrowserRouter([
       {
         path: "admin",
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole={['admin']}>
             <Admin />
           </ProtectedRoute>
         ),
       },
-      // {
-      //   path: "home",
-      //   element: (
-      //     <ProtectedRoute>
-      //       <Home />
-      //     </ProtectedRoute>
-      //   ),
-      // },
     ],
   },
 ]);

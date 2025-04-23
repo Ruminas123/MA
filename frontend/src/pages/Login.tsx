@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../utils/api'; // เปลี่ยนจาก axios เป็น api instance
 import { useAuth } from '../contexts/AuthContext';
-import './Login.css';
+import '../css/Login.css';
 
 interface LoginForm {
   personnel_username: string;
@@ -59,12 +59,12 @@ export function Login() {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h2 className="login-title">เข้าสู่ระบบ</h2>
+        <h2 className="login-title">LOGIN</h2>
         <p className="login-title" style={{color: 'red'}}>user: admin , pass: 123456</p>
         {error && <div className="login-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <label htmlFor="personnel_username">ชื่อผู้ใช้</label>
+          <label htmlFor="personnel_username">USERNAME</label>
           <input
             type="text"
             id="personnel_username"
@@ -72,11 +72,11 @@ export function Login() {
             value={formData.personnel_username}
             onChange={handleChange}
             required
-            placeholder="ชื่อผู้ใช้"
+            placeholder="username"
             autoComplete="off"
           />
 
-          <label htmlFor="personnel_password">รหัสผ่าน</label>
+          <label htmlFor="personnel_password">PASSWORD</label>
           <input
             type="password"
             id="personnel_password"
@@ -84,7 +84,7 @@ export function Login() {
             value={formData.personnel_password}
             onChange={handleChange}
             required
-            placeholder="รหัสผ่าน"
+            placeholder="password"
             autoComplete="off"
           />
 

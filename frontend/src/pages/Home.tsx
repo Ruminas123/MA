@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import axios from 'axios'; // ยังจำเป็นสำหรับ axios.isCancel
-import './Home.css';
+import '../css//Home.css';
 import api from '../utils/api'; // ใช้ api จากไฟล์นี้แทน
 import { useAuth } from '../contexts/AuthContext';
 

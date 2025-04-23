@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: string[];
+  requiredRole?: string[]; // เปลี่ยนให้รับหลาย role
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
@@ -12,8 +12,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
   const location = useLocation();
 
   if (loading) return null;
-  else if (!isAuthenticated) { return <Navigate to="/ma-app/login" state={{ from: location }} replace />}
-  else if (requiredRole && !requiredRole.includes(user?.role || '')) { return <Navigate to="/unauthorized" replace />}
+  if (!isAuthenticated) {
+    return <Navigate to="/ma-app/login" state={{ from: location }} replace />;
+  }
+  if (requiredRole && !requiredRole.includes(user?.role || '')) {
+    return <Navigate to="/unauthorized" replace />;
+  }
 
   return <>{children}</>;
 };

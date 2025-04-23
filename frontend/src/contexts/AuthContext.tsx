@@ -1,3 +1,4 @@
+// src/contexts/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
@@ -32,7 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const response = await api.get('/api/auth/verify');
           setUser(response.data.user);
           setIsAuthenticated(true);
-        } catch (error) {
+        } catch {
           localStorage.removeItem('token');
         }
       }
@@ -45,7 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-            logout();
+          logout();
         }
         return Promise.reject(error);
       }
