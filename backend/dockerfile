@@ -1,0 +1,26 @@
+# Use the official Node.js image as the base image
+FROM node:18.20.8
+
+# Set the working directory in the container
+WORKDIR /usr/src/app
+
+# Copy the package files first to leverage Docker cache during builds
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install --no-package-lock
+
+# Rebuild bcrypt for the correct architecture
+RUN npm rebuild bcrypt --build-from-source
+
+# Copy the rest of the application code into the container
+COPY . .
+
+# Install ping utilities for network operations
+RUN apt-get update && apt-get install -y iputils-ping
+
+# Expose the port that the application will run on
+EXPOSE 3000
+
+# Start the application
+CMD ["node", "server.js"]

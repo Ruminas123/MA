@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "module": "esnext",  
+    "jsx": "react-jsx",
+    "target": "ES6",
+    "moduleResolution": "bundler",  // Set moduleResolution to "bundler"
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,  // Add this to enable allowImportingTsExtensions
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.tsx" 
+  ]
+}
