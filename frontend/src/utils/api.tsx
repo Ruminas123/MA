@@ -1,9 +1,7 @@
-// src/utils/api.ts
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-// สร้าง API instance
 const api = axios.create({
   baseURL: API_BASE_URL,
 });
@@ -20,11 +18,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-        alert('session หมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่');
+      const currentPath = window.location.pathname;
+      if (!currentPath.includes('/login')) {
+        alert('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
         localStorage.removeItem('token');
         window.location.href = '/ma-app/login';
+      }
     }
-    return Promise.reject(error);
+    
+    return Promise.reject(error); // ส่งให้ component ไปจัดการ
   }
 );
 

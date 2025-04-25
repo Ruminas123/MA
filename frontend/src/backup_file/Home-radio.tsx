@@ -28,6 +28,7 @@ export function Home() {
     status: string;
     latitude: number;
     longitude: number;
+    project?: string; // เพิ่ม project property
   }
 
   interface IpStatus {
@@ -42,6 +43,7 @@ export function Home() {
     latitude: number;
     longitude: number;
     status: string;
+    project: string; // เพิ่ม project property
   }
 
   const LoadingPage = () => (
@@ -81,16 +83,19 @@ export function Home() {
   const [elapsedTime, setElapsedTime] = useState<number>(0);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [projects, setProjects] = useState<string[]>([]); // เพิ่มตัวแปรสำหรับเก็บรายการ project ทั้งหมด
+  const [selectedProject, setSelectedProject] = useState<string>('all'); // เพิ่มตัวแปรสำหรับเก็บค่า project ที่เลือก
   const itemsPerPage = 50;
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  const locationIndexRef = useRef({ byIp: new Map(), byName: new Map(), byCoordinates: new Map() });
+  const locationIndexRef = useRef({ byIp: new Map(), byName: new Map(), byCoordinates: new Map(), byProject: new Map() });
 
   useEffect(() => {
     const byIp = new Map();
     const byName = new Map();
     const byCoordinates = new Map();
+    const byProject = new Map(); // เพิ่ม index สำหรับ project
 
     locations.forEach((location, idx) => {
       location.ip.toLowerCase().split('.').forEach(word => {
@@ -110,9 +115,15 @@ export function Home() {
       byCoordinates.get(latStr).add(idx);
       if (!byCoordinates.has(lngStr)) byCoordinates.set(lngStr, new Set());
       byCoordinates.get(lngStr).add(idx);
+
+      // เพิ่มการจัดเก็บ index ตาม project
+      if (location.project) {
+        if (!byProject.has(location.project)) byProject.set(location.project, new Set());
+        byProject.get(location.project).add(idx);
+      }
     });
 
-    locationIndexRef.current = { byIp, byName, byCoordinates };
+    locationIndexRef.current = { byIp, byName, byCoordinates, byProject };
   }, [locations]);
 
   useEffect(() => {
@@ -139,12 +150,17 @@ export function Home() {
       if (results) {
         const locationData: Location[] = [];
         const ipStatusMap: IpStatus = {};
+        const projectsSet = new Set<string>();
 
         results.forEach((data: any) => {
           if (data && data.internet_protocol_latitude && data.internet_protocol_longtitude && data.internet_protocol_ip) {
             const lat = parseFloat(data.internet_protocol_latitude);
             const lng = parseFloat(data.internet_protocol_longtitude);
             const ip = data.internet_protocol_ip;
+            const project = data.internet_protocol_project || 'ไม่ระบุโครงการ'; // เพิ่มการเก็บค่า project
+
+            // เก็บ project ทั้งหมดใน Set เพื่อกำจัดค่าซ้ำ
+            projectsSet.add(project);
 
             locationData.push({
               ip,
@@ -154,12 +170,14 @@ export function Home() {
               latitude: lat,
               longitude: lng,
               status: data.internet_protocol_status || 'Unknown',
+              project: project,
             });
 
             ipStatusMap[ip] = {
               status: data.internet_protocol_status || 'Unknown',
               latitude: lat,
               longitude: lng,
+              project: project,
             };
           }
         });
@@ -168,6 +186,9 @@ export function Home() {
         setIpStatuses(ipStatusMap);
         setLastUpdate(new Date());
         setCurrentPage(1);
+        
+        // เพิ่มการเซ็ต projects จาก Set ที่เก็บรวบรวมมา
+        setProjects(Array.from(projectsSet).sort());
       }
     } catch (requestError: any) {
       if (!axios.isCancel(requestError)) setError('There was an error fetching data.');
@@ -188,15 +209,33 @@ export function Home() {
     return status === 'Online' ? greenIcon : status === 'Offline' ? redIcon : silverIcon;
   }, []);
 
+  // ปรับปรุงฟังก์ชัน filteredLocations ให้กรองตาม project ที่เลือกด้วย
   const filteredLocations = useMemo(() => {
-    if (!debouncedSearchTerm.trim()) return locations;
+    // กรองโดย project ก่อน
+    let projectFiltered = locations;
+    if (selectedProject !== 'all') {
+      projectFiltered = locations.filter(location => location.project === selectedProject);
+    }
+
+    // ถ้าไม่มีคำค้นหา ส่งคืนรายการที่กรองตาม project
+    if (!debouncedSearchTerm.trim()) return projectFiltered;
 
     const term = debouncedSearchTerm.toLowerCase().trim();
     const termParts = term.split(/[\s.,]+/);
-    if (termParts.length === 0) return locations;
+    if (termParts.length === 0) return projectFiltered;
 
+    // ตรงนี้ต้องปรับให้ search จาก projectFiltered แทน locations
     const matchedIndices = new Set<number>();
     let isFirstTerm = true;
+
+    // สร้าง map ใหม่เพื่อเก็บ index ของ projectFiltered
+    const filteredIndexMap = new Map<number, number>();
+    projectFiltered.forEach((loc, idx) => {
+      const originalIdx = locations.findIndex(l => l.id === loc.id);
+      if (originalIdx >= 0) {
+        filteredIndexMap.set(originalIdx, idx);
+      }
+    });
 
     termParts.forEach(part => {
       if (part.length === 0) return;
@@ -204,15 +243,33 @@ export function Home() {
       const currentMatches = new Set<number>();
 
       locationIndexRef.current.byIp.forEach((indices, key) => {
-        if (key.includes(part)) indices.forEach(idx => currentMatches.add(idx));
+        if (key.includes(part)) {
+          indices.forEach(idx => {
+            if (filteredIndexMap.has(idx)) {
+              currentMatches.add(filteredIndexMap.get(idx));
+            }
+          });
+        }
       });
 
       locationIndexRef.current.byName.forEach((indices, key) => {
-        if (key.includes(part)) indices.forEach(idx => currentMatches.add(idx));
+        if (key.includes(part)) {
+          indices.forEach(idx => {
+            if (filteredIndexMap.has(idx)) {
+              currentMatches.add(filteredIndexMap.get(idx));
+            }
+          });
+        }
       });
 
       locationIndexRef.current.byCoordinates.forEach((indices, key) => {
-        if (key.includes(part)) indices.forEach(idx => currentMatches.add(idx));
+        if (key.includes(part)) {
+          indices.forEach(idx => {
+            if (filteredIndexMap.has(idx)) {
+              currentMatches.add(filteredIndexMap.get(idx));
+            }
+          });
+        }
       });
 
       if (isFirstTerm) {
@@ -229,7 +286,7 @@ export function Home() {
     });
 
     if (matchedIndices.size === 0) {
-      return locations.filter(location =>
+      return projectFiltered.filter(location =>
         location.ip.toLowerCase().includes(term) ||
         location.name.toLowerCase().includes(term) ||
         location.latitude.toString().includes(term) ||
@@ -237,8 +294,8 @@ export function Home() {
       );
     }
 
-    return Array.from(matchedIndices).map(idx => locations[idx]);
-  }, [locations, debouncedSearchTerm]);
+    return Array.from(matchedIndices).map(idx => projectFiltered[idx]);
+  }, [locations, debouncedSearchTerm, selectedProject]);
 
   const totalPages = Math.ceil(filteredLocations.length / itemsPerPage);
 
@@ -266,6 +323,7 @@ export function Home() {
             <div className="popup-content">
               <h3>{location.name}</h3>
               <p>IP: {location.ip}</p>
+              <p>โครงการ: {location.project}</p>
               <p>Coordinates: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}</p>
               <p>Status: <span style={getStatusStyle(status)}>{status}</span></p>
             </div>
@@ -288,11 +346,16 @@ export function Home() {
       const displayStatus = isRefreshing ? 'Checking...' : status;
 
       return (
-        <div key={`status-${location.ip}-${index}`} className={`status-item ${displayStatus.toLowerCase()}`} onClick={() => setMapCenter(location.position)}>
+        <div 
+          key={`status-${location.ip}-${index}`} 
+          className={`status-item ${displayStatus.toLowerCase()}`} 
+          onClick={() => setMapCenter(location.position)}
+        >
           <div className="status-indicator" />
           <div className="status-details">
             <h3>{location.ip}</h3>
             <p>{location.name}</p>
+            <p className="project">{location.project}</p>
             <p className="coordinates">{location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}</p>
           </div>
         </div>
@@ -308,6 +371,11 @@ export function Home() {
     return now.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
+  const handleProjectChange = (e) => {
+    setSelectedProject(e.target.value);
+    setCurrentPage(1); // รีเซ็ตหน้าเมื่อเปลี่ยนโครงการ
+  };
+
   const handlePageChange = newPage => {
     if (newPage >= 1 && newPage <= totalPages) setCurrentPage(newPage);
   };
@@ -319,6 +387,44 @@ export function Home() {
         <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="pagination-button">&laquo; ก่อนหน้า</button>
         <span className="pagination-info">หน้า {currentPage} จาก {totalPages}</span>
         <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} className="pagination-button">ถัดไป &raquo;</button>
+      </div>
+    );
+  };
+
+  // สร้าง Radio Group สำหรับกรองตาม project
+  const renderProjectFilter = () => {
+    return (
+      <div className="project-filter">
+        <h3>กรองตามโครงการ:</h3>
+        <div className="radio-group">
+          <label className="radio-label">
+            <input
+              type="radio"
+              name="project"
+              value="all"
+              checked={selectedProject === 'all'}
+              onChange={handleProjectChange}
+            />
+            <span>ทั้งหมด ({locations.length})</span>
+          </label>
+          
+          {/* สร้าง radio button สำหรับแต่ละ project */}
+          {projects.map(project => {
+            const count = locations.filter(location => location.project === project).length;
+            return (
+              <label key={project} className="radio-label">
+                <input
+                  type="radio"
+                  name="project"
+                  value={project}
+                  checked={selectedProject === project}
+                  onChange={handleProjectChange}
+                />
+                <span>{project} ({count})</span>
+              </label>
+            );
+          })}
+        </div>
       </div>
     );
   };
@@ -349,8 +455,23 @@ export function Home() {
 
           <div className="status-list">
             <h2>IP Addresses Status:</h2>
-            <input type="text" placeholder="ค้นหา" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="search-input" />
-            <div className="status-info">{filteredLocations.length} IP address found</div>
+            
+            {/* เพิ่ม Radio Group สำหรับกรองตาม project */}
+            {renderProjectFilter()}
+            
+            <input 
+              type="text" 
+              placeholder="ค้นหา IP, ชื่อสถานที่ หรือพิกัด" 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              className="search-input" 
+            />
+            
+            <div className="status-info">
+              {filteredLocations.length} IP address found
+              {selectedProject !== 'all' && ` ในโครงการ "${selectedProject}"`}
+            </div>
+            
             <div className="status-grid">{statusList}</div>
             {renderPagination()}
           </div>

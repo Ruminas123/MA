@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import api from '../utils/api'; // เปลี่ยนจาก axios เป็น api instance
+import api from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import '../css/Login.css';
 
@@ -31,7 +31,6 @@ export function Login() {
     setError('');
 
     try {
-      // ใช้ api instance แทน axios โดยตรง
       const response = await api.post('/api/auth/login', formData, {
         headers: { 'Content-Type': 'application/json' }
       });
@@ -39,7 +38,7 @@ export function Login() {
       if (response.data && response.data.token) {
         const user = response.data.user;
         login(response.data.token, user);
-        if (user.role === 'admin') {
+        if (user.role === 'admin' || user.role === 'user') {
           navigate('/ma-app/', { replace: true });
         } else {
           const from = location.state?.from?.pathname || '/';
@@ -49,18 +48,28 @@ export function Login() {
         setError('Invalid response from server');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred during login');
+      if (err.response?.status === 401) {
+        const msg = err.response?.data?.message?.toLowerCase() || '';
+        if (msg.includes('invalid')) {
+          setError('กรุณากรอกชื่อผู้ใช้หรือรหัสผ่านให้ถูกต้อง');
+        } else {
+          setError('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง');
+        }
+      } else {
+        setError('เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // รายละเอียด JSX คงเดิม
   return (
     <div className="login-container">
       <div className="login-card">
         <h2 className="login-title">LOGIN</h2>
-        <p className="login-title" style={{color: 'red'}}>user: admin , pass: 123456</p>
+        <p className="login-title" style={{ color: 'red' }}>
+          user: user , pass: abc@1234
+        </p>
         {error && <div className="login-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
@@ -89,9 +98,7 @@ export function Login() {
           />
 
           <button type="submit" disabled={isLoading}>
-            {isLoading ? (
-              <div className="spinner" />
-            ) : null}
+            {isLoading ? <div className="spinner" /> : null}
             {isLoading ? 'Signing in...' : 'เข้าสู่ระบบ'}
           </button>
         </form>

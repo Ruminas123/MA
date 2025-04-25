@@ -148,6 +148,66 @@
   margin-bottom: 12px;
 }
 
+#Home .search-input {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+/* Add this to your Home.css file */
+
+.project-filter {
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #f7f7f7;
+  border-radius: 5px;
+}
+
+.project-filter h3 {
+  margin-bottom: 10px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.tree-select-container {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: white;
+  padding: 10px;
+}
+
+.project-tree {
+  width: 100%;
+}
+
+/* Style for tree nodes */
+.ant-tree-title {
+  font-size: 14px;
+}
+
+/* Style for tree checkboxes */
+.ant-tree-checkbox {
+  margin-right: 8px;
+}
+
+/* Style for selected nodes */
+.ant-tree-node-selected {
+  background-color: #e6f7ff;
+}
+
+/* Make the tree more compact */
+.ant-tree-treenode {
+  padding: 4px 0;
+}
+
+/* Add a subtle hover effect */
+.ant-tree-node-content-wrapper:hover {
+  background-color: #f0f0f0;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
