@@ -41,6 +41,7 @@ export function Home() {
     id: number;
     latitude: number;
     longitude: number;
+    code: string;
     status: string;
   }
 
@@ -85,12 +86,13 @@ export function Home() {
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  const locationIndexRef = useRef({ byIp: new Map(), byName: new Map(), byCoordinates: new Map() });
+  const locationIndexRef = useRef({ byIp: new Map(), byName: new Map(), byCoordinates: new Map(), byCode: new Map() });
 
   useEffect(() => {
     const byIp = new Map();
     const byName = new Map();
     const byCoordinates = new Map();
+    const byCode = new Map();
 
     locations.forEach((location, idx) => {
       location.ip.toLowerCase().split('.').forEach(word => {
@@ -110,9 +112,17 @@ export function Home() {
       byCoordinates.get(latStr).add(idx);
       if (!byCoordinates.has(lngStr)) byCoordinates.set(lngStr, new Set());
       byCoordinates.get(lngStr).add(idx);
+      
+      // Add indexing for code search
+      if (location.code) {
+        location.code.toLowerCase().split(/\s+/).forEach(word => {
+          if (!byCode.has(word)) byCode.set(word, new Set());
+          byCode.get(word).add(idx);
+        });
+      }
     });
 
-    locationIndexRef.current = { byIp, byName, byCoordinates };
+    locationIndexRef.current = { byIp, byName, byCoordinates, byCode };
   }, [locations]);
 
   useEffect(() => {
@@ -153,6 +163,7 @@ export function Home() {
               position: [lat, lng],
               latitude: lat,
               longitude: lng,
+              code: data.internet_protocol_code,
               status: data.internet_protocol_status || 'Unknown',
             });
 
@@ -214,6 +225,11 @@ export function Home() {
       locationIndexRef.current.byCoordinates.forEach((indices, key) => {
         if (key.includes(part)) indices.forEach(idx => currentMatches.add(idx));
       });
+      
+      // Add search by code capability
+      locationIndexRef.current.byCode.forEach((indices, key) => {
+        if (key.includes(part)) indices.forEach(idx => currentMatches.add(idx));
+      });
 
       if (isFirstTerm) {
         currentMatches.forEach(idx => matchedIndices.add(idx));
@@ -233,7 +249,8 @@ export function Home() {
         location.ip.toLowerCase().includes(term) ||
         location.name.toLowerCase().includes(term) ||
         location.latitude.toString().includes(term) ||
-        location.longitude.toString().includes(term)
+        location.longitude.toString().includes(term) ||
+        (location.code && location.code.toLowerCase().includes(term)) // Added code search here
       );
     }
 
@@ -267,6 +284,7 @@ export function Home() {
               <h3>{location.name}</h3>
               <p>IP: {location.ip}</p>
               <p>Coordinates: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}</p>
+              <p>Code: {location.code}</p>
               <p>Status: <span style={getStatusStyle(status)}>{status}</span></p>
             </div>
           </Popup>
@@ -294,6 +312,7 @@ export function Home() {
             <h3>{location.ip}</h3>
             <p>{location.name}</p>
             <p className="coordinates">{location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}</p>
+            {location.code && <p className="code">code: {location.code}</p>}
           </div>
         </div>
       );
@@ -349,7 +368,7 @@ export function Home() {
 
           <div className="status-list">
             <h2>IP Addresses Status:</h2>
-            <input type="text" placeholder="ค้นหา" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="search-input" />
+            <input type="text" placeholder="ค้นหา IP, location, coordinates, code" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="search-input" />
             <div className="status-info">{filteredLocations.length} IP address found</div>
             <div className="status-grid">{statusList}</div>
             {renderPagination()}
