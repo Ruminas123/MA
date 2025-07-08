@@ -8,5 +8,6 @@ export default defineConfig({
   server: {
     host: '0.0.0.0', // Allow connections from outside container
     port: 5173, // Default Vite port
+    allowedHosts: ['conic.myds.me'],
   }
 });
