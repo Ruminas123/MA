@@ -66,14 +66,10 @@ export function Login() {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h2 className="login-title">LOGIN</h2>
-        <p className="login-title" style={{ color: 'red' }}>
-          user: user , pass: abc@1234
-        </p>
+        <h1 className="login-title">LOGIN</h1>
         {error && <div className="login-error">{error}</div>}
-
         <form onSubmit={handleSubmit}>
-          <label htmlFor="personnel_username">USERNAME</label>
+          {/* <label htmlFor="personnel_username">USERNAME</label> */}
           <input
             type="text"
             id="personnel_username"
@@ -85,7 +81,7 @@ export function Login() {
             autoComplete="off"
           />
 
-          <label htmlFor="personnel_password">PASSWORD</label>
+          {/* <label htmlFor="personnel_password">PASSWORD</label> */}
           <input
             type="password"
             id="personnel_password"
@@ -96,10 +92,10 @@ export function Login() {
             placeholder="password"
             autoComplete="off"
           />
-
+          <br /><br />
           <button type="submit" disabled={isLoading}>
             {isLoading ? <div className="spinner" /> : null}
-            {isLoading ? 'Signing in...' : 'เข้าสู่ระบบ'}
+            Login
           </button>
         </form>
       </div>

@@ -10,26 +10,19 @@ services:
     volumes:
       - ./backend:/usr/src/app
       - /usr/src/app/node_modules
-    environment:
-      - NETWORK_HOST=${NETWORK_HOST}
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
+    env_file:
+      - ./backend/.env
 
   frontend:
     build: ./frontend
     container_name: ma_frontend_container
     restart: unless-stopped
     ports:
-      - "4000:5173"
+      - "4000:4000"
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    environment:
-      - NODE_ENV=${NODE_ENV}
-      - VITE_DEV_SERVER_PORT=${VITE_DEV_SERVER_PORT}
-      - VITE_API_URL=${VITE_API_URL}
+    env_file:
+      - ./frontend/.env
     depends_on:
       - backend

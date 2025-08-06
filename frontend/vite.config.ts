@@ -7,7 +7,7 @@ export default defineConfig({
   base: '/ma-app/', // กำหนด base path
   server: {
     host: '0.0.0.0', // Allow connections from outside container
-    port: 5173, // Default Vite port
-    allowedHosts: ['conic.myds.me'],
+    port: 4000, // Default Vite port
+    allowedHosts: ['security65.dyndns.org'],
   }
 });

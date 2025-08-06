@@ -14,6 +14,8 @@ const MAX_CONCURRENT_PINGS = process.env.MAX_CONCURRENT_PINGS ? parseInt(process
 const PING_TIMEOUT = process.env.PING_TIMEOUT ? parseInt(process.env.PING_TIMEOUT) : 2;
 const host = '0.0.0.0';
 
+console.log(' process.env.DB_HOST :>> 17',  process.env.DB_HOST);
+
 // PostgreSQL pool setup
 const pool = new Pool({
   host: process.env.DB_HOST,
