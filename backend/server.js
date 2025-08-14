@@ -10,7 +10,7 @@ const axios = require('axios');  // เพิ่มการ import axios
 
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3090;
 const host = process.env.NETWORK_HOST || 'localhost';
 
 app.use(compression());

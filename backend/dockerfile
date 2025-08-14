@@ -20,7 +20,7 @@ COPY . .
 RUN apt-get update && apt-get install -y iputils-ping
 
 # Expose the port that the application will run on
-EXPOSE 3000
+EXPOSE 3090
 
 # Start the application
 CMD ["node", "server.js"]
