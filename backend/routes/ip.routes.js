@@ -155,6 +155,26 @@ async function processBatchInWorker(ipBatch) {
   });
 }
 
+// Route to get the IPs from the database
+router.get('/get-ips', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT *
+      FROM internet_protocols
+      ORDER BY internet_protocol_id ASC
+    `);
+
+    res.json({
+      count: result.rows.length,
+      results: result.rows,
+      fetchedAt: new Date()
+    });
+  } catch (error) {
+    console.error('Error fetching IPs:', error);
+    res.status(500).json({ error: 'Database query failed', message: error.message });
+  }
+});
+
 // Route for checking IPs and updating their status
 router.post('/check-ips', async (req, res) => {
   try {

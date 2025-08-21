@@ -18,7 +18,7 @@ services:
     container_name: ma_frontend_container
     restart: unless-stopped
     ports:
-      - "3088:4000"
+      - "3088:3088"
     volumes:
       - ./frontend:/app
       - /app/node_modules

@@ -143,7 +143,7 @@ export function Home() {
       setIsLoading(true);
       setError(null);
 
-      const response = await api.post('/api/ip/get-ips', {}, { signal: abortSignal });
+      const response = await api.get('/api/ip/get-ips', { signal: abortSignal });
       const results = response.data.results;
 
       if (results) {
