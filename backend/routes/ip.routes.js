@@ -75,33 +75,15 @@ async function getIPsFromDB() {
 // Function to update IP status in the database
 async function updateIPStatusInDB(ip, status) {
   try {
-    // ตรวจสอบโครงสร้างตาราง (ถ้าไม่มี updated_at ให้ไม่ใส่)
-    const checkTableStructure = await pool.query(`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name = 'internet_protocols' 
-      AND column_name = 'updated_at'
-    `);
-    
-    let query;
-    if (checkTableStructure.rows.length > 0) {
-      // ถ้ามี updated_at column
-      query = `
-        UPDATE internet_protocols
-        SET internet_protocol_status = $1, updated_at = NOW()
-        WHERE internet_protocol_ip = $2
-      `;
-    } else {
-      // ถ้าไม่มี updated_at column
-      query = `
-        UPDATE internet_protocols
-        SET internet_protocol_status = $1
-        WHERE internet_protocol_ip = $2
-      `;
-    }
+    const query = `
+      UPDATE internet_protocols
+      SET internet_protocol_status = $1,
+          internet_protocol_time_update = NOW()
+      WHERE internet_protocol_ip = $2
+    `;
     
     const result = await pool.query(query, [status, ip]);
-    console.log(`Updated IP ${ip} status to ${status}. Rows affected: ${result.rowCount}`);
+    // console.log(`Updated IP ${ip} status to ${status}. Rows affected: ${result.rowCount}`);
     
     if (result.rowCount === 0) {
       console.warn(`No rows updated for IP: ${ip}. IP may not exist in database.`);
@@ -110,6 +92,7 @@ async function updateIPStatusInDB(ip, status) {
     console.error(`Failed to update IP ${ip}:`, error);
   }
 }
+
 
 // Function to handle batch processing of IPs
 async function processBatchInWorker(ipBatch) {
@@ -171,26 +154,6 @@ async function processBatchInWorker(ipBatch) {
     });
   });
 }
-
-// Route to get the IPs from the database
-router.post('/get-ips', authenticateToken, async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT *
-      FROM internet_protocols
-      ORDER BY internet_protocol_id ASC
-    `);
-
-    res.json({
-      count: result.rows.length,
-      results: result.rows,
-      fetchedAt: new Date()
-    });
-  } catch (error) {
-    console.error('Error fetching IPs:', error);
-    res.status(500).json({ error: 'Database query failed', message: error.message });
-  }
-});
 
 // Route for checking IPs and updating their status
 router.post('/check-ips', async (req, res) => {
