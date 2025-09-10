@@ -1,3 +1,4 @@
+//project/services/auth.service.js
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../models/db');

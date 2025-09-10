@@ -1,3 +1,4 @@
+//project/controllers/auth.controller.js
 const authService = require('../services/auth.service');
 
 exports.login = async (req, res) => {

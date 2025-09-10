@@ -1,3 +1,4 @@
+//project/middlewares/auth.middleware.js
 const jwt = require('jsonwebtoken');
 
 exports.authenticateToken = (req, res, next) => {

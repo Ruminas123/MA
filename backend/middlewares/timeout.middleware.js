@@ -1,3 +1,4 @@
+//project/middlewares/timeout.middleware.js
 module.exports = (req, res, next) => {
   const timeout = parseInt(process.env.REQUEST_TIMEOUT) || 120000;
   res.setTimeout(timeout, () => {
