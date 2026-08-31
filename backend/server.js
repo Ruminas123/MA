@@ -28,15 +28,27 @@ app.listen(port, '0.0.0.0', () =>
   console.log(`Server running on port ${port}`)
 );
 
-// Cron job ทุกวันเวลา 17:00
-cron.schedule("0 17 * * *", async () => {
+// Cron job เวลา 06:00 - เช็คสถานะ IP + บันทึก log
+cron.schedule("0 6 * * *", async () => {
   try {
     let resultData = null;
     const res = { json: (data) => { resultData = data; } };
     await check_status_ip({}, res);
     await save_log_data(resultData);
-    console.log("✅ Cron job สำเร็จ เวลา 17:00");
+    console.log("✅ Cron job สำเร็จ เวลา 06:00 (บันทึก log แล้ว)");
   } catch (err) {
-    console.error("❌ Cron job error:", err.message);
+    console.error("❌ Cron job error (06:00):", err.message);
+  }
+});
+
+// Cron job เวลา 12:00 - เช็คสถานะ IP อย่างเดียว ไม่บันทึก log
+cron.schedule("0 12 * * *", async () => {
+  try {
+    let resultData = null;
+    const res = { json: (data) => { resultData = data; } };
+    await check_status_ip({}, res);
+    console.log("✅ Cron job สำเร็จ เวลา 12:00 (ไม่บันทึก log)");
+  } catch (err) {
+    console.error("❌ Cron job error (12:00):", err.message);
   }
 });

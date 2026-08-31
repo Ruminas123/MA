@@ -6,7 +6,7 @@ services:
     container_name: ma_backend_container
     restart: unless-stopped
     ports:
-      - "3090:3090"
+      - "3334:3334"
     volumes:
       - ./backend:/usr/src/app
       - /usr/src/app/node_modules
@@ -18,7 +18,7 @@ services:
     container_name: ma_frontend_container
     restart: unless-stopped
     ports:
-      - "3088:3088"
+      - "3333:3333"
     volumes:
       - ./frontend:/app
       - /app/node_modules

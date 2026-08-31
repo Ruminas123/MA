@@ -1,13 +1,15 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/ma-app/', // กำหนด base path
+
+  base: '/ma-app/',
+
   server: {
-    host: '0.0.0.0', // Allow connections from outside container
-    port: 4000, // Default Vite port
+    host: '0.0.0.0',
+    port: 3333,
+    strictPort: true,
     allowedHosts: ['conic.ddns.net'],
-  }
+  },
 });

@@ -331,7 +331,7 @@ export function Home() {
         <header className="app-header">
           <h1>เครื่องมือตรวจสอบสถานะ IP</h1>
           <div className="controls">
-            <span className="last-update">อัปเดตล่าสุด: {getAdjustedDate()} เวลา 18:00:00 น.</span>
+            <span className="last-update">อัปเดตล่าสุด: {getAdjustedDate()} เวลา 17:00:00 น.</span>
             <button style={{ background: 'red' }} onClick={logout}>Logout</button>
           </div>
         </header>

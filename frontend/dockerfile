@@ -8,7 +8,7 @@ RUN npm install
 COPY . .
 
 # Expose the default Vite port
-EXPOSE 3088
+EXPOSE 3333
 
-# ✅ Run Vite dev server on port 3088 and host 0.0.0.0
-CMD ["npm", "run", "dev", "--", "--port", "3088", "--host", "0.0.0.0"]
+# ✅ Run Vite dev server on port 3333 and host 0.0.0.0
+CMD ["npm", "run", "dev", "--", "--port", "3333", "--host", "0.0.0.0"]

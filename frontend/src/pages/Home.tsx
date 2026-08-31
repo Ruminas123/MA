@@ -112,7 +112,7 @@ export function Home() {
       byCoordinates.get(latStr).add(idx);
       if (!byCoordinates.has(lngStr)) byCoordinates.set(lngStr, new Set());
       byCoordinates.get(lngStr).add(idx);
-      
+
       // Add indexing for code search
       if (location.code) {
         location.code.toLowerCase().split(/\s+/).forEach(word => {
@@ -225,7 +225,7 @@ export function Home() {
       locationIndexRef.current.byCoordinates.forEach((indices, key) => {
         if (key.includes(part)) indices.forEach(idx => currentMatches.add(idx));
       });
-      
+
       // Add search by code capability
       locationIndexRef.current.byCode.forEach((indices, key) => {
         if (key.includes(part)) indices.forEach(idx => currentMatches.add(idx));
@@ -319,12 +319,38 @@ export function Home() {
     });
   }, [paginatedLocations, ipStatuses, isRefreshing]);
 
-  const getAdjustedDate = () => {
+  // หาว่ารอบ cron ล่าสุดที่ผ่านมาแล้วคือรอบไหน (06:00 หรือ 12:00)
+  // แล้ว fix เวลาที่แสดงให้ตรงกับรอบนั้น แทนที่จะโชว์เวลาที่ browser fetch จริง
+  // เพราะข้อมูลสถานะ IP ที่เห็นบนหน้าเว็บ เป็นผลจากรอบ cron ล่าสุดเท่านั้น (คนละเวลากับตอน fetch)
+  const getFixedUpdateLabel = () => {
     const now = new Date();
-    const eighteen = new Date();
-    eighteen.setHours(18, 0, 0, 0);
-    if (now < eighteen) now.setDate(now.getDate() - 1);
-    return now.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+    const six = new Date(now);
+    six.setHours(6, 0, 0, 0);
+    const twelve = new Date(now);
+    twelve.setHours(12, 0, 0, 0);
+
+    const cycleDate = new Date(now);
+    let cycleTime = '06:00:00';
+
+    if (now >= twelve) {
+      // ผ่านรอบ 12:00 ของวันนี้มาแล้ว
+      cycleTime = '12:00:00';
+    } else if (now >= six) {
+      // ผ่านรอบ 06:00 ของวันนี้มาแล้ว แต่ยังไม่ถึง 12:00
+      cycleTime = '06:00:00';
+    } else {
+      // ยังไม่ถึงรอบ 06:00 ของวันนี้ -> รอบล่าสุดคือ 12:00 ของเมื่อวาน
+      cycleTime = '12:00:00';
+      cycleDate.setDate(cycleDate.getDate() - 1);
+    }
+
+    const dateLabel = cycleDate.toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    return `${dateLabel} เวลา ${cycleTime}`;
   };
 
   const handlePageChange = newPage => {
@@ -350,7 +376,7 @@ export function Home() {
         <header className="app-header">
           <h1>เครื่องมือตรวจสอบสถานะ IP</h1>
           <div className="controls">
-            <span className="last-update">อัปเดตล่าสุด: {getAdjustedDate()} เวลา 18:00:00 น.</span>
+            <span className="last-update">อัปเดตล่าสุด: {getFixedUpdateLabel()} น.</span>
             <button style={{ background: 'red' }} onClick={logout}>Logout</button>
           </div>
         </header>
